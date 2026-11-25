@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">DSK YouTube</string>
+    <string name="brand_tagline">Watch Everything. Pay Nothing.</string>
+    <string name="brand_free_badge">100% FREE</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_shorts">Shorts</string>
+    <string name="nav_create">Create</string>
+    <string name="nav_subscriptions">Subscriptions</string>
+    <string name="nav_you">You</string>
+    <string name="action_search">Search</string>
+    <string name="action_notifications">Notifications</string>
+    <string name="action_profile">Profile</string>
+    <string name="action_subscribe">Subscribe</string>
+    <string name="action_subscribed">Subscribed</string>
+    <string name="action_like">Like</string>
+    <string name="action_dislike">Dislike</string>
+    <string name="action_share">Share</string>
+    <string name="action_watch_later">Watch Later</string>
+    <string name="action_report">Report</string>
+    <string name="error_network_or_storage">Storage or network constraint encountered. Please retry.</string>
+</resources>
