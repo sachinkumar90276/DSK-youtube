@@ -18,10 +18,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.data.local.entity.ChannelEntity
 import com.example.data.local.entity.VideoWithChannel
-import com.example.ui.components.ChannelAvatar
-import com.example.ui.components.VideoCard
+import com.example.ui.components.*
 import com.example.ui.theme.DskRed
-import com.example.ui.theme.DskWhite
 import com.example.ui.util.formatCount
 
 @Composable
@@ -55,61 +53,77 @@ fun SubscriptionsScreen(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding(),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Column {
-                Text("Subscriptions", style = MaterialTheme.typography.headlineMedium)
-                Text(
-                    "100% free creator subscriptions — never any fee or membership charge.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            LiquidGlassCard(
+                shape = RoundedCornerShape(24.dp),
+                intensity = GlassIntensity.STRONG,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("Subscriptions", style = MaterialTheme.typography.headlineMedium)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "100% free creator subscriptions — never any fee or membership charge.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
 
         if (!isSignedIn) {
             item {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                    shape = RoundedCornerShape(18.dp),
+                LiquidGlassCard(
+                    shape = RoundedCornerShape(24.dp),
+                    intensity = GlassIntensity.REGULAR,
+                    accentTint = DskRed,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
-                        modifier = Modifier.padding(20.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Icon(Icons.Outlined.Subscriptions, contentDescription = null, modifier = Modifier.size(44.dp), tint = DskRed)
+                        Icon(Icons.Outlined.Subscriptions, contentDescription = null, modifier = Modifier.size(46.dp), tint = DskRed)
                         Text("Sign in to follow your favorite creators", style = MaterialTheme.typography.titleMedium)
-                        Button(
-                            onClick = onRequireSignIn,
-                            colors = ButtonDefaults.buttonColors(containerColor = DskRed)
-                        ) {
-                            Text("Sign In")
+                        LiquidGlassButton(onClick = onRequireSignIn) {
+                            Text("Sign In", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             }
         } else if (subscribedChannels.isNotEmpty()) {
             item {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    items(subscribedChannels, key = { it.id }) { ch ->
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier
-                                .width(76.dp)
-                                .clickable { onChannelClick(ch.id) }
-                        ) {
-                            ChannelAvatar(name = ch.name, avatarUri = ch.avatarUri, size = 56.dp)
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                text = ch.name,
-                                style = MaterialTheme.typography.labelSmall,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                LiquidGlassCard(
+                    shape = RoundedCornerShape(20.dp),
+                    intensity = GlassIntensity.SUBTLE,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        items(subscribedChannels, key = { it.id }) { ch ->
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .width(76.dp)
+                                    .clickable { onChannelClick(ch.id) }
+                            ) {
+                                ChannelAvatar(name = ch.name, avatarUri = ch.avatarUri, size = 56.dp)
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    text = ch.name,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
                     }
                 }
@@ -139,15 +153,14 @@ fun SubscriptionsScreen(
                 Text("Discover Free Channels", style = MaterialTheme.typography.titleLarge)
             }
             items(discoverChannels, key = { it.id }) { ch ->
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onChannelClick(ch.id) }
+                LiquidGlassCard(
+                    shape = RoundedCornerShape(18.dp),
+                    intensity = GlassIntensity.REGULAR,
+                    onClick = { onChannelClick(ch.id) },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier.padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         ChannelAvatar(name = ch.name, avatarUri = ch.avatarUri, size = 46.dp)
@@ -160,10 +173,9 @@ fun SubscriptionsScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Button(
+                        LiquidGlassButton(
                             onClick = { onToggleSubscribe(ch.id) },
-                            colors = ButtonDefaults.buttonColors(containerColor = DskRed, contentColor = DskWhite),
-                            shape = RoundedCornerShape(99.dp)
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
                         ) {
                             Text("Subscribe", fontWeight = FontWeight.Bold)
                         }

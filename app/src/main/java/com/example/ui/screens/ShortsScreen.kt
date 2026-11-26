@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import android.view.ViewGroup
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -9,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Send
@@ -37,13 +39,15 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.example.data.local.entity.CommentWithReplies
 import com.example.data.local.entity.ShortWithChannel
-import com.example.ui.components.ChannelAvatar
-import com.example.ui.components.VideoThumbnailImage
+import com.example.data.remote.YouTubeParser
+import com.example.ui.components.*
 import com.example.ui.theme.DskRed
 import com.example.ui.theme.DskWhite
+import com.example.ui.theme.GlassHighlight
+import com.example.ui.theme.GlassRedBorder
 import com.example.ui.util.formatCount
 
-@OptIn(UnstableApi::class, ExperimentalMaterial3Api::class)
+@kotlin.OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShortsScreen(
     shorts: List<ShortWithChannel>,
@@ -69,14 +73,16 @@ fun ShortsScreen(
         Box(
             modifier = modifier
                 .fillMaxSize()
-                .background(Color.Black),
+                .padding(24.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "No Shorts available yet. Upload one with Create (+)!",
-                color = DskWhite,
-                style = MaterialTheme.typography.titleMedium
-            )
+            LiquidGlassCard(shape = RoundedCornerShape(24.dp), intensity = GlassIntensity.REGULAR) {
+                Text(
+                    text = "No Shorts loaded yet. Refresh Home to sync YouTube Shorts, or upload one with Create (+)!",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(24.dp)
+                )
+            }
         }
         return
     }
@@ -98,9 +104,11 @@ fun ShortsScreen(
             modifier = Modifier.fillMaxSize()
         ) { page ->
             val item = shorts[page]
-            val isVisible = pagerState.currentPage == page && commentSheetShortId == null
+            val isCurrentPage = pagerState.currentPage == page
+            val isVisible = isCurrentPage && commentSheetShortId == null
             ShortPageItem(
                 item = item,
+                isCurrentPage = isCurrentPage,
                 isVisible = isVisible,
                 isLiked = "SHORT:${item.shortItem.id}" in likedKeys,
                 isSubscribed = item.channel.id in subscribedChannelIds,
@@ -115,7 +123,7 @@ fun ShortsScreen(
             )
         }
 
-        // Top Shorts Title Overlay
+        // Top Floating Liquid Glass Shorts Pill
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -124,12 +132,14 @@ fun ShortsScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Surface(
-                color = Color.Black.copy(alpha = 0.45f),
-                shape = RoundedCornerShape(99.dp)
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(99.dp))
+                    .background(Color(0xFF0E1018).copy(alpha = 0.56f))
+                    .border(1.dp, GlassHighlight.copy(alpha = 0.45f), RoundedCornerShape(99.dp))
+                    .padding(horizontal = 14.dp, vertical = 7.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
@@ -140,12 +150,14 @@ fun ShortsScreen(
         }
     }
 
-    // Comments Bottom Sheet
+    // Translucent Liquid Glass Comments Sheet
     commentSheetShortId?.let { sid ->
         val sheetComments = commentsMap["SHORT:$sid"].orEmpty()
         var draft by remember(sid) { mutableStateOf("") }
         ModalBottomSheet(
-            onDismissRequest = { commentSheetShortId = null }
+            onDismissRequest = { commentSheetShortId = null },
+            containerColor = Color(0xFF10131E).copy(alpha = 0.94f),
+            contentColor = DskWhite
         ) {
             Column(
                 modifier = Modifier
@@ -156,7 +168,7 @@ fun ShortsScreen(
             ) {
                 Text(
                     text = "Comments (${sheetComments.size})",
-                    style = MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
                 Spacer(Modifier.height(10.dp))
                 LazyColumn(
@@ -179,21 +191,26 @@ fun ShortsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    OutlinedTextField(
+                    LiquidGlassTextField(
                         value = draft,
                         onValueChange = { draft = it },
-                        placeholder = { Text("Add a comment...") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
+                        placeholder = "Add a comment...",
+                        singleLine = true,
+                        shape = RoundedCornerShape(99.dp),
+                        modifier = Modifier.weight(1f)
                     )
-                    IconButton(onClick = {
-                        if (draft.isNotBlank()) {
-                            onAddComment(sid, draft)
-                            draft = ""
-                        }
-                    }) {
+                    LiquidGlassIconButton(
+                        onClick = {
+                            if (draft.isNotBlank()) {
+                                onAddComment(sid, draft)
+                                draft = ""
+                            }
+                        },
+                        size = 44.dp
+                    ) {
                         Icon(Icons.AutoMirrored.Outlined.Send, contentDescription = "Send comment", tint = DskRed)
                     }
                 }
@@ -202,10 +219,11 @@ fun ShortsScreen(
     }
 }
 
-@OptIn(UnstableApi::class)
+@androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 private fun ShortPageItem(
     item: ShortWithChannel,
+    isCurrentPage: Boolean,
     isVisible: Boolean,
     isLiked: Boolean,
     isSubscribed: Boolean,
@@ -221,30 +239,15 @@ private fun ShortPageItem(
     val context = LocalContext.current
     val s = item.shortItem
     val ch = item.channel
+    val ytShortId = remember(s.id, s.videoUrl, s.sourceType) {
+        if (s.sourceType == "YOUTUBE") YouTubeParser.extractVideoId(s.id) ?: s.id
+        else YouTubeParser.extractVideoId(s.videoUrl)
+    }
+    val isYouTube = ytShortId != null
     var userPaused by remember(s.id) { mutableStateOf(false) }
 
-    val exoPlayer = remember(s.id) {
-        ExoPlayer.Builder(context).build().apply {
-            repeatMode = Player.REPEAT_MODE_ONE
-            setMediaItem(MediaItem.fromUri(s.videoUrl))
-        }
-    }
-
-    LaunchedEffect(isVisible, userPaused) {
-        if (isVisible) {
-            onRecordView()
-            if (exoPlayer.playbackState == Player.STATE_IDLE) {
-                exoPlayer.prepare()
-            }
-            exoPlayer.playWhenReady = !userPaused
-        } else {
-            exoPlayer.playWhenReady = false
-            exoPlayer.pause()
-        }
-    }
-
-    DisposableEffect(s.id) {
-        onDispose { exoPlayer.release() }
+    LaunchedEffect(isCurrentPage, s.id) {
+        if (isCurrentPage) onRecordView()
     }
 
     Box(
@@ -256,7 +259,7 @@ private fun ShortPageItem(
                 indication = null
             ) { userPaused = !userPaused }
     ) {
-        // 9:16 Centered Video Frame (responsive on both phone & tablet)
+        // 9:16 Centered Video Frame
         Box(
             modifier = Modifier
                 .fillMaxHeight()
@@ -270,22 +273,55 @@ private fun ShortPageItem(
                 contentDescription = s.title,
                 modifier = Modifier.fillMaxSize()
             )
-            if (isVisible) {
-                AndroidView(
-                    factory = { ctx ->
-                        PlayerView(ctx).apply {
-                            useController = false
-                            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                            layoutParams = ViewGroup.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                ViewGroup.LayoutParams.MATCH_PARENT
-                            )
-                            player = exoPlayer
+            if (isCurrentPage) {
+                if (isYouTube && ytShortId != null) {
+                    YouTubeEmbedPlayer(
+                        videoId = ytShortId,
+                        autoplay = true,
+                        loop = true,
+                        isActive = isVisible && !userPaused,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    val exoPlayer = remember(s.id) {
+                        ExoPlayer.Builder(context).build().apply {
+                            repeatMode = Player.REPEAT_MODE_ONE
+                            setMediaItem(MediaItem.fromUri(s.videoUrl))
                         }
-                    },
-                    update = { pv -> pv.player = exoPlayer },
-                    modifier = Modifier.fillMaxSize()
-                )
+                    }
+
+                    LaunchedEffect(isVisible, userPaused) {
+                        if (isVisible) {
+                            if (exoPlayer.playbackState == Player.STATE_IDLE) {
+                                exoPlayer.prepare()
+                            }
+                            exoPlayer.playWhenReady = !userPaused
+                        } else {
+                            exoPlayer.playWhenReady = false
+                            exoPlayer.pause()
+                        }
+                    }
+
+                    DisposableEffect(s.id) {
+                        onDispose { exoPlayer.release() }
+                    }
+
+                    AndroidView(
+                        factory = { ctx ->
+                            PlayerView(ctx).apply {
+                                useController = false
+                                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                                layoutParams = ViewGroup.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.MATCH_PARENT
+                                )
+                                player = exoPlayer
+                            }
+                        },
+                        update = { pv -> pv.player = exoPlayer },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
         }
 
@@ -293,7 +329,7 @@ private fun ShortPageItem(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(260.dp)
+                .height(270.dp)
                 .align(Alignment.BottomCenter)
                 .background(
                     Brush.verticalGradient(
@@ -303,31 +339,39 @@ private fun ShortPageItem(
         )
 
         if (userPaused) {
-            Surface(
-                color = Color.Black.copy(alpha = 0.6f),
-                shape = RoundedCornerShape(99.dp),
+            Box(
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .size(64.dp)
+                    .size(68.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.56f))
+                    .border(1.2.dp, GlassHighlight.copy(alpha = 0.55f), CircleShape),
+                contentAlignment = Alignment.Center
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Filled.Pause, contentDescription = "Paused", tint = DskWhite, modifier = Modifier.size(34.dp))
-                }
+                Icon(Icons.Filled.Pause, contentDescription = "Paused", tint = DskWhite, modifier = Modifier.size(34.dp))
             }
         }
 
-        // Right Side Action Rail
+        // Right Side Floating Glass Action Rail
         Column(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 12.dp, bottom = 28.dp),
+                .padding(end = 12.dp, bottom = 26.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            ShortRailButton(
+                icon = if (userPaused) Icons.Filled.PlayArrow else Icons.Filled.Pause,
+                label = if (userPaused) "Play" else "Pause",
+                tint = DskWhite,
+                onClick = { userPaused = !userPaused },
+                tag = "short_play_pause_${s.id}"
+            )
             ShortRailButton(
                 icon = if (isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                 label = formatCount(s.likeCount),
                 tint = if (isLiked) DskRed else DskWhite,
+                highlighted = isLiked,
                 onClick = onToggleLike,
                 tag = "short_like_${s.id}"
             )
@@ -354,7 +398,7 @@ private fun ShortPageItem(
             )
         }
 
-        // Bottom Left Creator Info, Caption, Music Info
+        // Bottom Left Glass Creator Pill, Caption, Music Pill
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
@@ -369,9 +413,9 @@ private fun ShortPageItem(
                 ChannelAvatar(
                     name = ch.name,
                     avatarUri = ch.avatarUri,
-                    size = 36.dp,
+                    size = 38.dp,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(99.dp))
+                        .clip(CircleShape)
                         .clickable(onClick = onChannelClick)
                 )
                 Text(
@@ -380,18 +424,24 @@ private fun ShortPageItem(
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                     modifier = Modifier.clickable(onClick = onChannelClick)
                 )
-                Button(
-                    onClick = onSubscribe,
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isSubscribed) Color.White.copy(alpha = 0.22f) else DskRed,
-                        contentColor = DskWhite
-                    ),
-                    shape = RoundedCornerShape(99.dp),
-                    modifier = Modifier.height(32.dp)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(99.dp))
+                        .background(
+                            if (isSubscribed) Color.White.copy(alpha = 0.18f)
+                            else DskRed.copy(alpha = 0.90f)
+                        )
+                        .border(
+                            0.8.dp,
+                            if (isSubscribed) GlassHighlight else GlassRedBorder,
+                            RoundedCornerShape(99.dp)
+                        )
+                        .clickable(onClick = onSubscribe)
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Text(
                         text = if (isSubscribed) "Subscribed" else "Subscribe",
+                        color = DskWhite,
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
                     )
                 }
@@ -403,12 +453,14 @@ private fun ShortPageItem(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-            Surface(
-                color = Color.Black.copy(alpha = 0.55f),
-                shape = RoundedCornerShape(99.dp)
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(99.dp))
+                    .background(Color(0xFF0E1018).copy(alpha = 0.56f))
+                    .border(0.8.dp, GlassHighlight.copy(alpha = 0.4f), RoundedCornerShape(99.dp))
+                    .padding(horizontal = 11.dp, vertical = 6.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
@@ -431,6 +483,7 @@ private fun ShortRailButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     tint: Color,
+    highlighted: Boolean = false,
     onClick: () -> Unit,
     tag: String
 ) {
@@ -441,14 +494,22 @@ private fun ShortRailButton(
             .clickable(onClick = onClick)
             .testTag(tag)
     ) {
-        Surface(
-            color = Color.Black.copy(alpha = 0.45f),
-            shape = RoundedCornerShape(99.dp),
-            modifier = Modifier.size(44.dp)
+        Box(
+            modifier = Modifier
+                .size(46.dp)
+                .clip(CircleShape)
+                .background(
+                    if (highlighted) DskRed.copy(alpha = 0.28f)
+                    else Color(0xFF0E1018).copy(alpha = 0.56f)
+                )
+                .border(
+                    width = 1.dp,
+                    color = if (highlighted) GlassRedBorder else GlassHighlight.copy(alpha = 0.45f),
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(24.dp))
-            }
+            Icon(icon, contentDescription = label, tint = tint, modifier = Modifier.size(23.dp))
         }
         Spacer(Modifier.height(3.dp))
         Text(text = label, color = DskWhite, style = MaterialTheme.typography.labelSmall)

@@ -5,16 +5,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.local.entity.PlaylistEntity
 import com.example.data.local.entity.VideoWithChannel
-import com.example.ui.components.CompactVideoRow
+import com.example.ui.components.*
 import com.example.ui.theme.DskRed
 
 @Composable
@@ -37,46 +36,40 @@ fun PlaylistDetailScreen(
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+        LiquidGlassTopBar(
+            title = playlist.title,
+            subtitle = "${videos.size} videos • ${playlist.visibility}",
+            onBack = onBack
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
-                }
-                Text(playlist.title, style = MaterialTheme.typography.titleLarge)
-            }
             if (isOwner) {
-                Row {
-                    IconButton(onClick = { showEditDialog = true }) {
-                        Icon(Icons.Outlined.Edit, contentDescription = "Edit playlist")
-                    }
-                    IconButton(onClick = {
+                LiquidGlassIconButton(onClick = { showEditDialog = true }, size = 38.dp, intensity = GlassIntensity.SUBTLE) {
+                    Icon(Icons.Outlined.Edit, contentDescription = "Edit playlist", modifier = Modifier.size(18.dp))
+                }
+                LiquidGlassIconButton(
+                    onClick = {
                         onDeletePlaylist()
                         onBack()
-                    }) {
-                        Icon(Icons.Outlined.Delete, contentDescription = "Delete playlist", tint = DskRed)
-                    }
+                    },
+                    size = 38.dp,
+                    intensity = GlassIntensity.SUBTLE
+                ) {
+                    Icon(Icons.Outlined.Delete, contentDescription = "Delete playlist", tint = DskRed, modifier = Modifier.size(18.dp))
                 }
             }
         }
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             item {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-                    shape = RoundedCornerShape(16.dp),
+                LiquidGlassCard(
+                    shape = RoundedCornerShape(22.dp),
+                    intensity = GlassIntensity.REGULAR,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(playlist.title, style = MaterialTheme.typography.headlineSmall)
                         if (playlist.description.isNotBlank()) {
                             Text(playlist.description, style = MaterialTheme.typography.bodyMedium)
@@ -88,13 +81,10 @@ fun PlaylistDetailScreen(
                         )
                         if (videos.isNotEmpty()) {
                             Spacer(Modifier.height(4.dp))
-                            Button(
-                                onClick = { onPlayVideo(videos.first().video.id) },
-                                colors = ButtonDefaults.buttonColors(containerColor = DskRed)
-                            ) {
+                            LiquidGlassButton(onClick = { onPlayVideo(videos.first().video.id) }) {
                                 Icon(Icons.Outlined.PlayArrow, contentDescription = null)
                                 Spacer(Modifier.width(6.dp))
-                                Text("Play All")
+                                Text("Play All", fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -135,27 +125,37 @@ fun PlaylistDetailScreen(
         var title by remember { mutableStateOf(playlist.title) }
         var desc by remember { mutableStateOf(playlist.description) }
         var vis by remember { mutableStateOf(playlist.visibility) }
-        AlertDialog(
+        LiquidGlassDialog(
             onDismissRequest = { showEditDialog = false },
-            title = { Text("Edit Playlist") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Title") })
-                    OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("Description") })
+            title = "Edit Playlist",
+            content = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    LiquidGlassTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        label = "Title",
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    LiquidGlassTextField(
+                        value = desc,
+                        onValueChange = { desc = it },
+                        label = "Description",
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(selected = vis == "PUBLIC", onClick = { vis = "PUBLIC" }, label = { Text("Public") })
-                        FilterChip(selected = vis == "PRIVATE", onClick = { vis = "PRIVATE" }, label = { Text("Private") })
+                        LiquidGlassChip(selected = vis == "PUBLIC", onClick = { vis = "PUBLIC" }, label = "Public")
+                        LiquidGlassChip(selected = vis == "PRIVATE", onClick = { vis = "PRIVATE" }, label = "Private")
                     }
                 }
             },
-            confirmButton = {
-                Button(onClick = {
+            actions = {
+                TextButton(onClick = { showEditDialog = false }) { Text("Cancel") }
+                Spacer(Modifier.width(8.dp))
+                LiquidGlassButton(onClick = {
                     onEditPlaylist(title, desc, vis)
                     showEditDialog = false
                 }) { Text("Save") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showEditDialog = false }) { Text("Cancel") }
             }
         )
     }

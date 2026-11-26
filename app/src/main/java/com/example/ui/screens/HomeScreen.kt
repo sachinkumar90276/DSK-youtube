@@ -11,10 +11,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -25,14 +27,16 @@ import com.example.data.local.entity.CategoryEntity
 import com.example.data.local.entity.ProfileEntity
 import com.example.data.local.entity.ShortWithChannel
 import com.example.data.local.entity.VideoWithChannel
-import com.example.ui.components.ChannelAvatar
-import com.example.ui.components.DskBrandLogo
-import com.example.ui.components.VideoCard
-import com.example.ui.components.VideoThumbnailImage
+import com.example.data.remote.YouTubeSyncState
+import com.example.ui.components.*
 import com.example.ui.theme.DskRed
+import com.example.ui.theme.DskWarning
 import com.example.ui.theme.DskWhite
+import com.example.ui.theme.GlassEdgeShadow
+import com.example.ui.theme.GlassHighlight
 import com.example.ui.util.formatCount
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     videos: List<VideoWithChannel>,
@@ -42,6 +46,9 @@ fun HomeScreen(
     unreadNotifications: Int,
     currentProfile: ProfileEntity?,
     gridColumns: Int,
+    syncState: YouTubeSyncState,
+    onRefresh: () -> Unit,
+    onCategorySelected: (String) -> Unit,
     onSearchClick: () -> Unit,
     onNotificationsClick: () -> Unit,
     onProfileClick: () -> Unit,
@@ -67,18 +74,30 @@ fun HomeScreen(
         }
     }
 
-    Column(modifier = modifier.fillMaxSize()) {
-        // Top Brand Header
-        Surface(
-            color = MaterialTheme.colorScheme.background.copy(alpha = 0.96f),
-            tonalElevation = 2.dp
+    val isRefreshing = syncState is YouTubeSyncState.Refreshing
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+    ) {
+        // Floating Liquid Glass Header & Search Pill
+        LiquidGlassCard(
+            shape = RoundedCornerShape(26.dp),
+            intensity = GlassIntensity.STRONG,
+            elevation = 12.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 6.dp)
         ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -86,15 +105,19 @@ fun HomeScreen(
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        IconButton(
-                            onClick = onSearchClick,
-                            modifier = Modifier
-                                .minimumInteractiveComponentSize()
-                                .testTag("home_search_button")
+                        LiquidGlassIconButton(
+                            onClick = onRefresh,
+                            size = 40.dp,
+                            intensity = GlassIntensity.SUBTLE,
+                            modifier = Modifier.testTag("home_refresh_button")
                         ) {
-                            Icon(Icons.Outlined.Search, contentDescription = "Search")
+                            Icon(
+                                Icons.Outlined.Refresh,
+                                contentDescription = "Refresh YouTube feed",
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
                         BadgedBox(
                             badge = {
@@ -108,285 +131,373 @@ fun HomeScreen(
                                 }
                             }
                         ) {
-                            IconButton(
+                            LiquidGlassIconButton(
                                 onClick = onNotificationsClick,
-                                modifier = Modifier
-                                    .minimumInteractiveComponentSize()
-                                    .testTag("home_notifications_button")
+                                size = 40.dp,
+                                intensity = GlassIntensity.SUBTLE,
+                                modifier = Modifier.testTag("home_notifications_button")
                             ) {
-                                Icon(Icons.Outlined.Notifications, contentDescription = "Notifications")
+                                Icon(
+                                    Icons.Outlined.Notifications,
+                                    contentDescription = "Notifications",
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
                         }
-                        IconButton(
+                        LiquidGlassIconButton(
                             onClick = onProfileClick,
-                            modifier = Modifier
-                                .minimumInteractiveComponentSize()
-                                .testTag("home_profile_button")
+                            size = 40.dp,
+                            intensity = GlassIntensity.SUBTLE,
+                            modifier = Modifier.testTag("home_profile_button")
                         ) {
                             if (currentProfile != null) {
                                 ChannelAvatar(
                                     name = currentProfile.displayName,
                                     avatarUri = currentProfile.avatarUri,
-                                    size = 30.dp
+                                    size = 32.dp
                                 )
                             } else {
-                                Icon(Icons.Outlined.AccountCircle, contentDescription = "Profile")
+                                Icon(
+                                    Icons.Outlined.AccountCircle,
+                                    contentDescription = "Profile",
+                                    modifier = Modifier.size(22.dp)
+                                )
                             }
                         }
                     }
                 }
 
-                // Category Chips Row
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                // Interactive Glass Search Bar Pill
+                LiquidGlassPill(
+                    intensity = GlassIntensity.SUBTLE,
+                    elevation = 2.dp,
+                    onClick = onSearchClick,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = 46.dp)
+                        .testTag("home_search_button")
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
                 ) {
-                    items(chipNames) { cat ->
-                        val selected = selectedCategory == cat
-                        FilterChip(
-                            selected = selected,
-                            onClick = { selectedCategory = cat },
-                            label = { Text(cat) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = DskRed,
-                                selectedLabelColor = DskWhite
-                            ),
-                            modifier = Modifier.testTag("category_chip_$cat")
+                    Icon(
+                        imageVector = Icons.Outlined.Search,
+                        contentDescription = "Search",
+                        tint = DskRed,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        text = "Search live YouTube videos, Shorts, channels...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(99.dp))
+                            .background(Color.White.copy(alpha = 0.08f))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = "LIVE",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = DskRed
                         )
                     }
                 }
             }
         }
 
-        // Feed Body
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
+        // Translucent Category Glass Chips
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // 100% Free Banner
-            item {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                        .border(1.dp, DskRed.copy(alpha = 0.35f), RoundedCornerShape(16.dp)),
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
-                ) {
-                    Row(
+            items(chipNames) { cat ->
+                val selected = selectedCategory == cat
+                LiquidGlassChip(
+                    selected = selected,
+                    onClick = {
+                        selectedCategory = cat
+                        onCategorySelected(cat)
+                    },
+                    label = cat,
+                    modifier = Modifier.testTag("category_chip_$cat")
+                )
+            }
+        }
+
+        // Pull-to-refresh Feed Body
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                if (selectedCategory == "All") onRefresh() else onCategorySelected(selectedCategory)
+            },
+            modifier = Modifier.fillMaxSize()
+        ) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = 6.dp, bottom = 28.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp)
+            ) {
+                // 100% Free Ad-Free Glass Banner
+                item {
+                    LiquidGlassCard(
+                        shape = RoundedCornerShape(20.dp),
+                        intensity = GlassIntensity.REGULAR,
+                        accentTint = DskRed,
+                        elevation = 6.dp,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(
-                                Brush.horizontalGradient(
-                                    colors = listOf(DskRed.copy(alpha = 0.16f), Color.Transparent)
-                                )
-                            )
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                            .padding(horizontal = 14.dp)
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Watch Everything. Pay Nothing.",
-                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "No subscriptions, no paywalls, no hidden fees — free creator streaming.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Icon(
-                            imageVector = Icons.Outlined.PlayCircle,
-                            contentDescription = null,
-                            tint = DskRed
-                        )
-                    }
-                }
-            }
-
-            if (selectedCategory == "All") {
-                val trending = videos.filter { it.video.isTrending || it.video.isFeatured }
-                    .ifEmpty { videos.take(4) }
-                val recommended = videos.filter { it.video.sectionTag == "Recommended For You" }
-                    .ifEmpty { videos.take(4) }
-                val latest = videos.sortedByDescending { it.video.createdAt }.take(6)
-                val mostViewed = videos.sortedByDescending { it.video.viewCount }.take(4)
-                val musicVideos = videos.filter { it.video.category.equals("Music", true) }
-                val liveStreams = videos.filter { it.video.isLive }
-
-                // Trending Section
-                if (trending.isNotEmpty()) {
-                    item { SectionHeader(title = "Trending Videos", icon = Icons.Outlined.Whatshot) }
-                    item {
-                        AdaptiveVideoGrid(
-                            items = trending,
-                            columns = gridColumns,
-                            watchLaterIds = watchLaterIds,
-                            onVideoClick = onVideoClick,
-                            onChannelClick = onChannelClick,
-                            onToggleWatchLater = onToggleWatchLater,
-                            onAddToPlaylist = onAddToPlaylist,
-                            onShareVideo = onShareVideo,
-                            onReportVideo = onReportVideo
-                        )
-                    }
-                }
-
-                // Popular Shorts Horizontal Strip
-                if (shorts.isNotEmpty()) {
-                    item { SectionHeader(title = "Popular Shorts", icon = Icons.Outlined.Bolt) }
-                    item {
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            items(shorts, key = { it.shortItem.id }) { s ->
-                                ShortPreviewCard(
-                                    item = s,
-                                    onClick = { onShortClick(s.shortItem.id) }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Watch Everything. Pay Nothing.",
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    text = "100% Free • Zero DSK Ads • Live YouTube Data API v3",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .liquidGlass(
+                                        shape = RoundedCornerShape(12.dp),
+                                        intensity = GlassIntensity.STRONG,
+                                        selected = true
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.PlayCircle,
+                                    contentDescription = null,
+                                    tint = DskWhite,
+                                    modifier = Modifier.size(22.dp)
                                 )
                             }
                         }
                     }
                 }
 
-                // Recommended For You
-                if (recommended.isNotEmpty()) {
-                    item { SectionHeader(title = "Recommended For You", icon = Icons.Outlined.AutoAwesome) }
-                    item {
-                        AdaptiveVideoGrid(
-                            items = recommended,
-                            columns = gridColumns,
-                            watchLaterIds = watchLaterIds,
-                            onVideoClick = onVideoClick,
-                            onChannelClick = onChannelClick,
-                            onToggleWatchLater = onToggleWatchLater,
-                            onAddToPlaylist = onAddToPlaylist,
-                            onShareVideo = onShareVideo,
-                            onReportVideo = onReportVideo
-                        )
+                // Live YouTube Sync Status / Quota / Missing Key Banner
+                when (syncState) {
+                    YouTubeSyncState.MissingApiKey -> {
+                        item {
+                            SyncStatusBanner(
+                                title = "YouTube API Key Not Configured",
+                                message = "Add YOUTUBE_API_KEY in the AI Studio Secrets panel to stream live YouTube trending videos, categories, Shorts, live streams, and search results.",
+                                accentColor = DskRed,
+                                onRetry = onRefresh
+                            )
+                        }
                     }
+                    is YouTubeSyncState.QuotaExceeded -> {
+                        item {
+                            SyncStatusBanner(
+                                title = "YouTube API Quota Exhausted",
+                                message = syncState.message,
+                                accentColor = DskWarning,
+                                onRetry = onRefresh
+                            )
+                        }
+                    }
+                    is YouTubeSyncState.Error -> {
+                        item {
+                            SyncStatusBanner(
+                                title = "YouTube Refresh Notice",
+                                message = syncState.message,
+                                accentColor = DskWarning,
+                                onRetry = onRefresh
+                            )
+                        }
+                    }
+                    else -> Unit
                 }
 
-                // Live Streams
-                if (liveStreams.isNotEmpty()) {
-                    item { SectionHeader(title = "Live Streams", icon = Icons.Outlined.Sensors) }
-                    item {
-                        AdaptiveVideoGrid(
-                            items = liveStreams,
-                            columns = gridColumns,
-                            watchLaterIds = watchLaterIds,
-                            onVideoClick = onVideoClick,
-                            onChannelClick = onChannelClick,
-                            onToggleWatchLater = onToggleWatchLater,
-                            onAddToPlaylist = onAddToPlaylist,
-                            onShareVideo = onShareVideo,
-                            onReportVideo = onReportVideo
-                        )
-                    }
-                }
+                if (selectedCategory == "All") {
+                    if (videos.isEmpty()) {
+                        item {
+                            EmptyFeedState(
+                                title = if (isRefreshing) "Loading live YouTube videos..." else "No YouTube videos loaded yet",
+                                subtitle = if (syncState is YouTubeSyncState.MissingApiKey) {
+                                    "Configure YOUTUBE_API_KEY in AI Studio Secrets, or upload your own video with Create (+)."
+                                } else {
+                                    "Pull down or tap Refresh to fetch live trending videos from YouTube."
+                                },
+                                isLoading = isRefreshing,
+                                onRetry = onRefresh
+                            )
+                        }
+                    } else {
+                        val trending = videos.filter { it.video.isTrending || it.video.isFeatured }
+                            .ifEmpty { videos.take(4) }
+                        val recommended = videos.filter { it.video.sectionTag == "Recommended For You" }
+                            .ifEmpty { videos.drop(4).take(6).ifEmpty { videos.take(4) } }
+                        val latest = videos.sortedByDescending { it.video.createdAt }.take(6)
+                        val mostViewed = videos.sortedByDescending { it.video.viewCount }.take(4)
+                        val musicVideos = videos.filter { it.video.category.equals("Music", true) }
+                        val liveStreams = videos.filter { it.video.isLive }
 
-                // Music Videos
-                if (musicVideos.isNotEmpty()) {
-                    item { SectionHeader(title = "Music Videos", icon = Icons.Outlined.MusicNote) }
-                    item {
-                        AdaptiveVideoGrid(
-                            items = musicVideos,
-                            columns = gridColumns,
-                            watchLaterIds = watchLaterIds,
-                            onVideoClick = onVideoClick,
-                            onChannelClick = onChannelClick,
-                            onToggleWatchLater = onToggleWatchLater,
-                            onAddToPlaylist = onAddToPlaylist,
-                            onShareVideo = onShareVideo,
-                            onReportVideo = onReportVideo
-                        )
-                    }
-                }
-
-                // Most Viewed
-                if (mostViewed.isNotEmpty()) {
-                    item { SectionHeader(title = "Most Viewed", icon = Icons.Outlined.TrendingUp) }
-                    item {
-                        AdaptiveVideoGrid(
-                            items = mostViewed,
-                            columns = gridColumns,
-                            watchLaterIds = watchLaterIds,
-                            onVideoClick = onVideoClick,
-                            onChannelClick = onChannelClick,
-                            onToggleWatchLater = onToggleWatchLater,
-                            onAddToPlaylist = onAddToPlaylist,
-                            onShareVideo = onShareVideo,
-                            onReportVideo = onReportVideo
-                        )
-                    }
-                }
-
-                // Latest Uploads
-                if (latest.isNotEmpty()) {
-                    item { SectionHeader(title = "Latest Uploads", icon = Icons.Outlined.Schedule) }
-                    item {
-                        AdaptiveVideoGrid(
-                            items = latest,
-                            columns = gridColumns,
-                            watchLaterIds = watchLaterIds,
-                            onVideoClick = onVideoClick,
-                            onChannelClick = onChannelClick,
-                            onToggleWatchLater = onToggleWatchLater,
-                            onAddToPlaylist = onAddToPlaylist,
-                            onShareVideo = onShareVideo,
-                            onReportVideo = onReportVideo
-                        )
-                    }
-                }
-            } else {
-                item {
-                    SectionHeader(title = "$selectedCategory Videos", icon = Icons.Outlined.VideoLibrary)
-                }
-                if (filteredVideos.isEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(36.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    imageVector = Icons.Outlined.VideoLibrary,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(48.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        if (trending.isNotEmpty()) {
+                            item { LiquidGlassSectionHeader(title = "Trending Videos", icon = Icons.Outlined.Whatshot) }
+                            item {
+                                AdaptiveVideoGrid(
+                                    items = trending,
+                                    columns = gridColumns,
+                                    watchLaterIds = watchLaterIds,
+                                    onVideoClick = onVideoClick,
+                                    onChannelClick = onChannelClick,
+                                    onToggleWatchLater = onToggleWatchLater,
+                                    onAddToPlaylist = onAddToPlaylist,
+                                    onShareVideo = onShareVideo,
+                                    onReportVideo = onReportVideo
                                 )
-                                Spacer(Modifier.height(10.dp))
-                                Text(
-                                    text = "No videos in $selectedCategory yet.",
-                                    style = MaterialTheme.typography.titleMedium
+                            }
+                        }
+
+                        if (shorts.isNotEmpty()) {
+                            item { LiquidGlassSectionHeader(title = "Popular Shorts", icon = Icons.Outlined.Bolt) }
+                            item {
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 14.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    items(shorts, key = { it.shortItem.id }) { s ->
+                                        ShortPreviewCard(
+                                            item = s,
+                                            onClick = { onShortClick(s.shortItem.id) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        if (recommended.isNotEmpty()) {
+                            item { LiquidGlassSectionHeader(title = "Recommended For You", icon = Icons.Outlined.AutoAwesome) }
+                            item {
+                                AdaptiveVideoGrid(
+                                    items = recommended,
+                                    columns = gridColumns,
+                                    watchLaterIds = watchLaterIds,
+                                    onVideoClick = onVideoClick,
+                                    onChannelClick = onChannelClick,
+                                    onToggleWatchLater = onToggleWatchLater,
+                                    onAddToPlaylist = onAddToPlaylist,
+                                    onShareVideo = onShareVideo,
+                                    onReportVideo = onReportVideo
                                 )
-                                Text(
-                                    text = "Be the first creator to upload one using Create (+)!",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        }
+
+                        if (liveStreams.isNotEmpty()) {
+                            item { LiquidGlassSectionHeader(title = "Live Streams", icon = Icons.Outlined.Sensors) }
+                            item {
+                                AdaptiveVideoGrid(
+                                    items = liveStreams,
+                                    columns = gridColumns,
+                                    watchLaterIds = watchLaterIds,
+                                    onVideoClick = onVideoClick,
+                                    onChannelClick = onChannelClick,
+                                    onToggleWatchLater = onToggleWatchLater,
+                                    onAddToPlaylist = onAddToPlaylist,
+                                    onShareVideo = onShareVideo,
+                                    onReportVideo = onReportVideo
+                                )
+                            }
+                        }
+
+                        if (musicVideos.isNotEmpty()) {
+                            item { LiquidGlassSectionHeader(title = "Music Videos", icon = Icons.Outlined.MusicNote) }
+                            item {
+                                AdaptiveVideoGrid(
+                                    items = musicVideos,
+                                    columns = gridColumns,
+                                    watchLaterIds = watchLaterIds,
+                                    onVideoClick = onVideoClick,
+                                    onChannelClick = onChannelClick,
+                                    onToggleWatchLater = onToggleWatchLater,
+                                    onAddToPlaylist = onAddToPlaylist,
+                                    onShareVideo = onShareVideo,
+                                    onReportVideo = onReportVideo
+                                )
+                            }
+                        }
+
+                        if (mostViewed.isNotEmpty()) {
+                            item { LiquidGlassSectionHeader(title = "Most Viewed", icon = Icons.Outlined.TrendingUp) }
+                            item {
+                                AdaptiveVideoGrid(
+                                    items = mostViewed,
+                                    columns = gridColumns,
+                                    watchLaterIds = watchLaterIds,
+                                    onVideoClick = onVideoClick,
+                                    onChannelClick = onChannelClick,
+                                    onToggleWatchLater = onToggleWatchLater,
+                                    onAddToPlaylist = onAddToPlaylist,
+                                    onShareVideo = onShareVideo,
+                                    onReportVideo = onReportVideo
+                                )
+                            }
+                        }
+
+                        if (latest.isNotEmpty()) {
+                            item { LiquidGlassSectionHeader(title = "Latest Uploads", icon = Icons.Outlined.Schedule) }
+                            item {
+                                AdaptiveVideoGrid(
+                                    items = latest,
+                                    columns = gridColumns,
+                                    watchLaterIds = watchLaterIds,
+                                    onVideoClick = onVideoClick,
+                                    onChannelClick = onChannelClick,
+                                    onToggleWatchLater = onToggleWatchLater,
+                                    onAddToPlaylist = onAddToPlaylist,
+                                    onShareVideo = onShareVideo,
+                                    onReportVideo = onReportVideo
                                 )
                             }
                         }
                     }
                 } else {
                     item {
-                        AdaptiveVideoGrid(
-                            items = filteredVideos,
-                            columns = gridColumns,
-                            watchLaterIds = watchLaterIds,
-                            onVideoClick = onVideoClick,
-                            onChannelClick = onChannelClick,
-                            onToggleWatchLater = onToggleWatchLater,
-                            onAddToPlaylist = onAddToPlaylist,
-                            onShareVideo = onShareVideo,
-                            onReportVideo = onReportVideo
-                        )
+                        LiquidGlassSectionHeader(title = "$selectedCategory Videos", icon = Icons.Outlined.VideoLibrary)
+                    }
+                    if (filteredVideos.isEmpty()) {
+                        item {
+                            EmptyFeedState(
+                                title = if (isRefreshing) "Fetching $selectedCategory from YouTube..." else "No videos in $selectedCategory yet",
+                                subtitle = "Pull down or tap Refresh to fetch live $selectedCategory videos from YouTube.",
+                                isLoading = isRefreshing,
+                                onRetry = { onCategorySelected(selectedCategory) }
+                            )
+                        }
+                    } else {
+                        item {
+                            AdaptiveVideoGrid(
+                                items = filteredVideos,
+                                columns = gridColumns,
+                                watchLaterIds = watchLaterIds,
+                                onVideoClick = onVideoClick,
+                                onChannelClick = onChannelClick,
+                                onToggleWatchLater = onToggleWatchLater,
+                                onAddToPlaylist = onAddToPlaylist,
+                                onShareVideo = onShareVideo,
+                                onReportVideo = onReportVideo
+                            )
+                        }
                     }
                 }
             }
@@ -395,23 +506,82 @@ fun HomeScreen(
 }
 
 @Composable
-private fun SectionHeader(
+private fun SyncStatusBanner(
     title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector
+    message: String,
+    accentColor: Color,
+    onRetry: () -> Unit
 ) {
-    Row(
+    LiquidGlassCard(
+        shape = RoundedCornerShape(18.dp),
+        intensity = GlassIntensity.REGULAR,
+        accentTint = accentColor,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = 14.dp)
     ) {
-        Icon(icon, contentDescription = null, tint = DskRed, modifier = Modifier.size(20.dp))
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onBackground
-        )
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(Icons.Outlined.Info, contentDescription = null, tint = accentColor)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+                Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            TextButton(onClick = onRetry) {
+                Text("Retry", color = accentColor, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyFeedState(
+    title: String,
+    subtitle: String,
+    isLoading: Boolean,
+    onRetry: () -> Unit
+) {
+    LiquidGlassCard(
+        shape = RoundedCornerShape(24.dp),
+        intensity = GlassIntensity.REGULAR,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(color = DskRed)
+            } else {
+                Icon(
+                    imageVector = Icons.Outlined.VideoLibrary,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
+                    tint = DskRed
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(text = title, style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (!isLoading) {
+                Spacer(Modifier.height(16.dp))
+                LiquidGlassButton(onClick = onRetry) {
+                    Text("Refresh Feed", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
     }
 }
 
@@ -431,7 +601,7 @@ private fun AdaptiveVideoGrid(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 14.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         rows.forEach { rowItems ->
@@ -467,12 +637,15 @@ private fun ShortPreviewCard(
     onClick: () -> Unit
 ) {
     val s = item.shortItem
+    val cardShape = RoundedCornerShape(20.dp)
     Box(
         modifier = Modifier
-            .width(148.dp)
-            .height(248.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .width(152.dp)
+            .height(254.dp)
+            .shadow(10.dp, cardShape, ambientColor = GlassEdgeShadow, spotColor = GlassEdgeShadow)
+            .clip(cardShape)
             .background(Color.Black)
+            .border(1.dp, GlassHighlight.copy(alpha = 0.48f), cardShape)
             .clickable(onClick = onClick)
             .testTag("home_short_card_${s.id}")
     ) {
@@ -487,21 +660,22 @@ private fun ShortPreviewCard(
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.84f)),
+                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.86f)),
                         startY = 200f
                     )
                 )
         )
-        Surface(
-            color = DskRed,
-            shape = RoundedCornerShape(6.dp),
+        Box(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(8.dp)
+                .clip(RoundedCornerShape(99.dp))
+                .background(DskRed.copy(alpha = 0.88f))
+                .border(0.8.dp, Color(0xFFFFA3AA).copy(alpha = 0.65f), RoundedCornerShape(99.dp))
+                .padding(horizontal = 8.dp, vertical = 3.dp)
         ) {
             Text(
                 text = "SHORT",
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                 color = DskWhite
             )
@@ -509,7 +683,7 @@ private fun ShortPreviewCard(
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(10.dp)
+                .padding(11.dp)
         ) {
             Text(
                 text = s.title,
@@ -518,11 +692,11 @@ private fun ShortPreviewCard(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(3.dp))
             Text(
                 text = "${formatCount(s.viewCount)} views",
                 style = MaterialTheme.typography.labelSmall,
-                color = DskWhite.copy(alpha = 0.78f)
+                color = DskWhite.copy(alpha = 0.8f)
             )
         }
     }

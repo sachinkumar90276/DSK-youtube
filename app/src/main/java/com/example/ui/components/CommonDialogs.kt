@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,58 +41,66 @@ fun ReportDialog(
     var selectedReason by remember { mutableStateOf(reasons.first()) }
     var details by remember { mutableStateOf("") }
 
-    AlertDialog(
+    LiquidGlassDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Report Content") },
-        text = {
+        title = "Report Content",
+        content = {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(max = 360.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
                     text = targetLabel,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(Modifier.height(4.dp))
                 reasons.forEach { reason ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { selectedReason = reason }
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    val isSelected = selectedReason == reason
+                    LiquidGlassCard(
+                        shape = RoundedCornerShape(14.dp),
+                        intensity = if (isSelected) GlassIntensity.REGULAR else GlassIntensity.SUBTLE,
+                        selected = isSelected,
+                        elevation = 0.dp,
+                        onClick = { selectedReason = reason },
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        RadioButton(
-                            selected = selectedReason == reason,
-                            onClick = { selectedReason = reason }
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(reason, style = MaterialTheme.typography.bodyMedium)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = { selectedReason = reason }
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(reason, style = MaterialTheme.typography.bodyMedium)
+                        }
                     }
                 }
-                OutlinedTextField(
+                LiquidGlassTextField(
                     value = details,
                     onValueChange = { details = it },
-                    label = { Text("Additional details (optional)") },
+                    label = "Additional details (optional)",
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 3
                 )
             }
         },
-        confirmButton = {
-            Button(
+        actions = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+            Spacer(Modifier.width(8.dp))
+            LiquidGlassButton(
                 onClick = { onSubmit(selectedReason, details) },
                 modifier = Modifier.testTag("submit_report_button")
             ) {
                 Text("Submit Report")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
             }
         }
     )
@@ -108,25 +117,25 @@ fun AddToPlaylistDialog(
     var newTitle by remember { mutableStateOf("") }
     var visibility by remember { mutableStateOf("PUBLIC") }
 
-    AlertDialog(
+    LiquidGlassDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (creating) "New Playlist" else "Save to Playlist") },
-        text = {
+        title = if (creating) "New Playlist" else "Save to Playlist",
+        content = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 if (!creating && playlists.isNotEmpty()) {
                     playlists.forEach { summary ->
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onSelectPlaylist(summary.playlist.id) },
-                            shape = MaterialTheme.shapes.small,
-                            color = MaterialTheme.colorScheme.surfaceVariant
+                        LiquidGlassCard(
+                            shape = RoundedCornerShape(16.dp),
+                            intensity = GlassIntensity.SUBTLE,
+                            elevation = 2.dp,
+                            onClick = { onSelectPlaylist(summary.playlist.id) },
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
-                                modifier = Modifier.padding(12.dp),
+                                modifier = Modifier.padding(14.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -145,31 +154,35 @@ fun AddToPlaylistDialog(
                         Text("+ Create new playlist")
                     }
                 } else {
-                    OutlinedTextField(
+                    LiquidGlassTextField(
                         value = newTitle,
                         onValueChange = { newTitle = it },
-                        label = { Text("Playlist title") },
+                        label = "Playlist title",
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
+                        LiquidGlassChip(
                             selected = visibility == "PUBLIC",
                             onClick = { visibility = "PUBLIC" },
-                            label = { Text("Public") }
+                            label = "Public"
                         )
-                        FilterChip(
+                        LiquidGlassChip(
                             selected = visibility == "PRIVATE",
                             onClick = { visibility = "PRIVATE" },
-                            label = { Text("Private") }
+                            label = "Private"
                         )
                     }
                 }
             }
         },
-        confirmButton = {
+        actions = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
             if (creating) {
-                Button(
+                Spacer(Modifier.width(8.dp))
+                LiquidGlassButton(
                     onClick = {
                         if (newTitle.trim().length >= 2) {
                             onCreateNew(newTitle.trim(), visibility)
@@ -179,11 +192,6 @@ fun AddToPlaylistDialog(
                 ) {
                     Text("Create")
                 }
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close")
             }
         }
     )

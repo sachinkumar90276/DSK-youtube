@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -32,6 +31,8 @@ import com.example.ui.theme.DskRed
 import com.example.ui.theme.DskRedDark
 import com.example.ui.theme.DskRedGlow
 import com.example.ui.theme.DskWhite
+import com.example.ui.theme.GlassHighlight
+import com.example.ui.theme.GlassRedBorder
 import com.example.ui.util.resolveThumbnailDrawable
 
 @Composable
@@ -59,7 +60,7 @@ fun DskPrismEmblem(
             )
         )
 
-        // Subtle inner facet highlight
+        // Subtle inner glass facet highlight
         val topFacet = Path().apply {
             moveTo(w * 0.16f, h * 0.10f)
             lineTo(w * 0.92f, h * 0.50f)
@@ -68,7 +69,7 @@ fun DskPrismEmblem(
         }
         drawPath(
             path = topFacet,
-            color = Color.White.copy(alpha = 0.14f)
+            color = Color.White.copy(alpha = 0.22f)
         )
 
         // Interlocking geometric white ribbon forming DSK kinetic mark
@@ -103,49 +104,60 @@ fun DskBrandLogo(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        DskPrismEmblem(size = 28.dp)
-        Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "DSK",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.8.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Spacer(Modifier.width(4.dp))
-                Surface(
-                    color = MaterialTheme.colorScheme.primary,
-                    shape = RoundedCornerShape(6.dp)
-                ) {
-                    Text(
-                        text = "YOUTUBE",
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.6.sp
-                        ),
-                        color = DskWhite
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .liquidGlass(
+                    shape = RoundedCornerShape(11.dp),
+                    intensity = GlassIntensity.REGULAR,
+                    accentTint = DskRed
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            DskPrismEmblem(size = 24.dp)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "DSK",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.8.sp
+                ),
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(Modifier.width(5.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(
+                        Brush.linearGradient(listOf(DskRedGlow.copy(alpha = 0.92f), DskRed.copy(alpha = 0.90f)))
                     )
-                }
+                    .border(0.8.dp, GlassRedBorder, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 7.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = "YOUTUBE",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.6.sp
+                    ),
+                    color = DskWhite
+                )
             }
         }
         if (showFreeBadge) {
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(99.dp),
-                modifier = Modifier.border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.outline,
-                    shape = RoundedCornerShape(99.dp)
-                )
+            Box(
+                modifier = Modifier
+                    .liquidGlass(
+                        shape = RoundedCornerShape(99.dp),
+                        intensity = GlassIntensity.SUBTLE
+                    )
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
             ) {
                 Text(
                     text = "FREE",
-                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.primary
+                    color = DskRed
                 )
             }
         }
@@ -171,10 +183,10 @@ fun ChannelAvatar(
             .clip(CircleShape)
             .background(
                 Brush.linearGradient(
-                    colors = listOf(DskRed, Color(0xFF3E1018))
+                    colors = listOf(DskRed, Color(0xFF42101A))
                 )
             )
-            .border(1.dp, Color.White.copy(alpha = 0.14f), CircleShape),
+            .border(1.2.dp, GlassHighlight, CircleShape),
         contentAlignment = Alignment.Center
     ) {
         if (!avatarUri.isNullOrBlank()) {

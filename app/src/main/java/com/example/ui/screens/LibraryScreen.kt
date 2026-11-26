@@ -1,6 +1,5 @@
 package com.example.ui.screens
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -16,10 +15,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.local.entity.*
-import com.example.ui.components.ChannelAvatar
-import com.example.ui.components.CompactVideoRow
+import com.example.ui.components.*
 import com.example.ui.theme.DskRed
-import com.example.ui.theme.DskWhite
 
 @Composable
 fun LibraryScreen(
@@ -54,22 +51,23 @@ fun LibraryScreen(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding(),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // User Header Card
+        // User Glass Profile Header Card
         item {
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
-                shape = RoundedCornerShape(20.dp),
+            LiquidGlassCard(
+                shape = RoundedCornerShape(26.dp),
+                intensity = GlassIntensity.STRONG,
+                elevation = 12.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         ChannelAvatar(
                             name = currentProfile?.displayName ?: "Guest",
                             avatarUri = currentProfile?.avatarUri,
-                            size = 56.dp
+                            size = 58.dp
                         )
                         Spacer(Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
@@ -83,31 +81,33 @@ fun LibraryScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        IconButton(
+                        LiquidGlassIconButton(
                             onClick = onOpenSettings,
+                            size = 42.dp,
+                            intensity = GlassIntensity.SUBTLE,
                             modifier = Modifier.testTag("library_settings_button")
                         ) {
-                            Icon(Icons.Outlined.Settings, contentDescription = "Settings")
+                            Icon(Icons.Outlined.Settings, contentDescription = "Settings", modifier = Modifier.size(20.dp))
                         }
                     }
 
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         if (currentUser == null) {
-                            Button(
+                            LiquidGlassButton(
                                 onClick = onOpenAuth,
-                                colors = ButtonDefaults.buttonColors(containerColor = DskRed),
                                 modifier = Modifier
                                     .weight(1f)
                                     .testTag("library_signin_button")
                             ) {
-                                Text("Sign In / Register")
+                                Text("Sign In / Register", fontWeight = FontWeight.Bold)
                             }
                         } else {
-                            OutlinedButton(
+                            LiquidGlassButton(
                                 onClick = onOpenEditProfile,
+                                isPrimary = false,
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -115,8 +115,9 @@ fun LibraryScreen(
                                 Text("Edit Profile")
                             }
                             if (myChannel != null) {
-                                OutlinedButton(
+                                LiquidGlassButton(
                                     onClick = { onChannelClick(myChannel.id) },
+                                    isPrimary = false,
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     Text("My Channel")
@@ -127,9 +128,8 @@ fun LibraryScreen(
 
                     // Admin Panel Entry — ONLY rendered when user holds verified admin role
                     if (isAdmin) {
-                        Button(
+                        LiquidGlassButton(
                             onClick = onOpenAdminPanel,
-                            colors = ButtonDefaults.buttonColors(containerColor = DskRed, contentColor = DskWhite),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag("open_admin_panel_button")
@@ -143,21 +143,17 @@ fun LibraryScreen(
             }
         }
 
-        // Section Chips
+        // Section Glass Chips
         item {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val tabs = listOf(
                     "History", "Watch Later", "Liked", "My Videos", "My Shorts", "Subscriptions", "Playlists"
                 )
                 items(tabs) { tab ->
-                    FilterChip(
+                    LiquidGlassChip(
                         selected = selectedSection == tab,
                         onClick = { selectedSection = tab },
-                        label = { Text(tab) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = DskRed,
-                            selectedLabelColor = DskWhite
-                        )
+                        label = tab
                     )
                 }
             }
@@ -223,14 +219,13 @@ fun LibraryScreen(
                     item { EmptyLibraryNote("Use Create (+) to publish a 9:16 Short.") }
                 } else {
                     items(myShorts, key = { it.shortItem.id }) { s ->
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onShortClick(s.shortItem.id) }
+                        LiquidGlassCard(
+                            shape = RoundedCornerShape(16.dp),
+                            intensity = GlassIntensity.SUBTLE,
+                            onClick = { onShortClick(s.shortItem.id) },
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Outlined.Bolt, contentDescription = null, tint = DskRed)
                                 Spacer(Modifier.width(10.dp))
                                 Text(s.shortItem.title, style = MaterialTheme.typography.titleSmall)
@@ -245,12 +240,11 @@ fun LibraryScreen(
                     item { EmptyLibraryNote("No channel subscriptions yet.") }
                 } else {
                     items(subscribedChannels, key = { it.id }) { ch ->
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onChannelClick(ch.id) }
+                        LiquidGlassCard(
+                            shape = RoundedCornerShape(16.dp),
+                            intensity = GlassIntensity.SUBTLE,
+                            onClick = { onChannelClick(ch.id) },
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                                 ChannelAvatar(name = ch.name, avatarUri = ch.avatarUri, size = 40.dp)
@@ -273,9 +267,9 @@ fun LibraryScreen(
                     ) {
                         Text("Playlists (${playlists.size})", style = MaterialTheme.typography.titleMedium)
                         if (currentUser != null) {
-                            Button(
+                            LiquidGlassButton(
                                 onClick = { showCreatePlaylist = true },
-                                colors = ButtonDefaults.buttonColors(containerColor = DskRed)
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
                             ) {
                                 Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(4.dp))
@@ -288,12 +282,11 @@ fun LibraryScreen(
                     item { EmptyLibraryNote("Create playlists to organize your favorite free videos.") }
                 } else {
                     items(playlists, key = { it.playlist.id }) { pl ->
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(14.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onPlaylistClick(pl.playlist.id) }
+                        LiquidGlassCard(
+                            shape = RoundedCornerShape(18.dp),
+                            intensity = GlassIntensity.REGULAR,
+                            onClick = { onPlaylistClick(pl.playlist.id) },
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
                                 modifier = Modifier.padding(14.dp),
@@ -324,27 +317,37 @@ fun LibraryScreen(
         var title by remember { mutableStateOf("") }
         var desc by remember { mutableStateOf("") }
         var visibility by remember { mutableStateOf("PUBLIC") }
-        AlertDialog(
+        LiquidGlassDialog(
             onDismissRequest = { showCreatePlaylist = false },
-            title = { Text("Create Playlist") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Title") }, singleLine = true)
-                    OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("Description") })
+            title = "Create Playlist",
+            content = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    LiquidGlassTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        label = "Title",
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    LiquidGlassTextField(
+                        value = desc,
+                        onValueChange = { desc = it },
+                        label = "Description",
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(selected = visibility == "PUBLIC", onClick = { visibility = "PUBLIC" }, label = { Text("Public") })
-                        FilterChip(selected = visibility == "PRIVATE", onClick = { visibility = "PRIVATE" }, label = { Text("Private") })
+                        LiquidGlassChip(selected = visibility == "PUBLIC", onClick = { visibility = "PUBLIC" }, label = "Public")
+                        LiquidGlassChip(selected = visibility == "PRIVATE", onClick = { visibility = "PRIVATE" }, label = "Private")
                     }
                 }
             },
-            confirmButton = {
-                Button(onClick = {
+            actions = {
+                TextButton(onClick = { showCreatePlaylist = false }) { Text("Cancel") }
+                Spacer(Modifier.width(8.dp))
+                LiquidGlassButton(onClick = {
                     onCreatePlaylist(title, desc, visibility)
                     showCreatePlaylist = false
                 }) { Text("Create") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCreatePlaylist = false }) { Text("Cancel") }
             }
         )
     }
@@ -352,9 +355,9 @@ fun LibraryScreen(
 
 @Composable
 private fun EmptyLibraryNote(text: String) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-        shape = RoundedCornerShape(14.dp),
+    LiquidGlassCard(
+        shape = RoundedCornerShape(18.dp),
+        intensity = GlassIntensity.SUBTLE,
         modifier = Modifier.fillMaxWidth()
     ) {
         Text(

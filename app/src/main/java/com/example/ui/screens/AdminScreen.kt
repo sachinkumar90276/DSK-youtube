@@ -5,7 +5,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.example.data.local.entity.CategoryEntity
 import com.example.data.local.entity.ReportEntity
 import com.example.data.local.entity.VideoEntity
+import com.example.ui.components.*
 import com.example.ui.theme.DskRed
 import com.example.ui.theme.DskSuccess
 import com.example.ui.theme.DskWarning
@@ -50,15 +50,21 @@ fun AdminScreen(
                 .padding(24.dp),
             contentAlignment = Alignment.Center
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Icon(Icons.Outlined.Lock, contentDescription = null, modifier = Modifier.size(54.dp), tint = DskRed)
-                Text("Administrator Access Required", style = MaterialTheme.typography.headlineSmall)
-                Text(
-                    "This Admin Panel is strictly protected. Standard user accounts cannot access moderation tools.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Button(onClick = onBack) { Text("Return") }
+            LiquidGlassCard(shape = RoundedCornerShape(26.dp), intensity = GlassIntensity.REGULAR) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(Icons.Outlined.Lock, contentDescription = null, modifier = Modifier.size(54.dp), tint = DskRed)
+                    Text("Administrator Access Required", style = MaterialTheme.typography.headlineSmall)
+                    Text(
+                        "This Admin Panel is strictly protected. Standard user accounts cannot access moderation tools.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    LiquidGlassButton(onClick = onBack) { Text("Return") }
+                }
             }
         }
         return
@@ -75,22 +81,13 @@ fun AdminScreen(
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+        LiquidGlassTopBar(
+            title = "DSK Admin Panel",
+            onBack = onBack
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
-                }
-                Text("DSK Admin Panel", style = MaterialTheme.typography.titleLarge)
-            }
-            Button(
+            LiquidGlassButton(
                 onClick = { showAddUrlDialog = true },
-                colors = ButtonDefaults.buttonColors(containerColor = DskRed)
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
             ) {
                 Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
@@ -98,15 +95,16 @@ fun AdminScreen(
             }
         }
 
-        ScrollableTabRow(selectedTabIndex = selectedTab, edgePadding = 12.dp) {
-            tabs.forEachIndexed { idx, label ->
-                Tab(selected = selectedTab == idx, onClick = { selectedTab = idx }, text = { Text(label) })
-            }
-        }
+        LiquidGlassSegmentedTabs(
+            tabs = tabs,
+            selectedIndex = selectedTab,
+            onSelect = { selectedTab = it },
+            scrollable = true
+        )
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             when (selectedTab) {
@@ -138,11 +136,12 @@ fun AdminScreen(
                     item { Text("Videos (${dashboard.videos.size})", style = MaterialTheme.typography.titleMedium) }
                     items(dashboard.videos, key = { it.video.id }) { item ->
                         val v = item.video
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-                            shape = RoundedCornerShape(14.dp)
+                        LiquidGlassCard(
+                            shape = RoundedCornerShape(18.dp),
+                            intensity = GlassIntensity.REGULAR,
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(v.title, style = MaterialTheme.typography.titleSmall)
                                 Text(
                                     "${item.channel.name} • ${v.category} • ${v.sectionTag} • ${formatCount(v.viewCount)} views",
@@ -150,25 +149,33 @@ fun AdminScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    FilterChip(
+                                    LiquidGlassChip(
                                         selected = v.isPublished,
                                         onClick = { onTogglePublished(v.id, !v.isPublished) },
-                                        label = { Text(if (v.isPublished) "Published" else "Hidden") }
+                                        label = if (v.isPublished) "Published" else "Hidden"
                                     )
-                                    FilterChip(
+                                    LiquidGlassChip(
                                         selected = v.isFeatured,
                                         onClick = { onToggleFeatured(v.id, !v.isFeatured) },
-                                        label = { Text("Featured") }
+                                        label = "Featured"
                                     )
-                                    FilterChip(
+                                    LiquidGlassChip(
                                         selected = v.isTrending,
                                         onClick = { onToggleTrending(v.id, !v.isTrending) },
-                                        label = { Text("Trending") }
+                                        label = "Trending"
                                     )
                                 }
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    OutlinedButton(onClick = { editingVideo = v }) { Text("Edit") }
-                                    OutlinedButton(onClick = { onDeleteVideo(v.id) }) {
+                                    LiquidGlassButton(
+                                        onClick = { editingVideo = v },
+                                        isPrimary = false,
+                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                                    ) { Text("Edit") }
+                                    LiquidGlassButton(
+                                        onClick = { onDeleteVideo(v.id) },
+                                        isPrimary = false,
+                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                                    ) {
                                         Text("Delete", color = DskRed)
                                     }
                                 }
@@ -177,9 +184,10 @@ fun AdminScreen(
                     }
                     item { Text("Shorts (${dashboard.shorts.size})", style = MaterialTheme.typography.titleMedium) }
                     items(dashboard.shorts, key = { it.shortItem.id }) { s ->
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(12.dp)
+                        LiquidGlassCard(
+                            shape = RoundedCornerShape(16.dp),
+                            intensity = GlassIntensity.SUBTLE,
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
                                 modifier = Modifier
@@ -204,31 +212,31 @@ fun AdminScreen(
                         var newCat by remember { mutableStateOf("") }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            OutlinedTextField(
+                            LiquidGlassTextField(
                                 value = newCat,
                                 onValueChange = { newCat = it },
-                                label = { Text("New Category") },
+                                label = "New Category",
                                 singleLine = true,
                                 modifier = Modifier.weight(1f)
                             )
-                            Spacer(Modifier.width(8.dp))
-                            Button(
+                            LiquidGlassButton(
                                 onClick = {
                                     if (newCat.isNotBlank()) {
                                         onAddCategory(newCat)
                                         newCat = ""
                                     }
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = DskRed)
+                                }
                             ) { Text("Add") }
                         }
                     }
                     items(categories, key = { it.id }) { cat ->
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(12.dp)
+                        LiquidGlassCard(
+                            shape = RoundedCornerShape(16.dp),
+                            intensity = GlassIntensity.SUBTLE,
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
                                 modifier = Modifier
@@ -249,9 +257,10 @@ fun AdminScreen(
                 3 -> {
                     item { Text("Users (${dashboard.users.size})", style = MaterialTheme.typography.titleMedium) }
                     items(dashboard.users, key = { it.user.id }) { uwp ->
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(12.dp)
+                        LiquidGlassCard(
+                            shape = RoundedCornerShape(16.dp),
+                            intensity = GlassIntensity.SUBTLE,
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
                                 modifier = Modifier
@@ -263,7 +272,11 @@ fun AdminScreen(
                                     Text(uwp.profile?.displayName ?: uwp.user.email, style = MaterialTheme.typography.titleSmall)
                                     Text(uwp.user.email, style = MaterialTheme.typography.bodySmall)
                                 }
-                                OutlinedButton(onClick = { onSetUserBlocked(uwp.user.id, !uwp.user.isBlocked) }) {
+                                LiquidGlassButton(
+                                    onClick = { onSetUserBlocked(uwp.user.id, !uwp.user.isBlocked) },
+                                    isPrimary = false,
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                                ) {
                                     Text(if (uwp.user.isBlocked) "Unblock" else "Block")
                                 }
                             }
@@ -271,9 +284,10 @@ fun AdminScreen(
                     }
                     item { Text("Channels (${dashboard.channels.size})", style = MaterialTheme.typography.titleMedium) }
                     items(dashboard.channels, key = { it.id }) { ch ->
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(12.dp)
+                        LiquidGlassCard(
+                            shape = RoundedCornerShape(16.dp),
+                            intensity = GlassIntensity.SUBTLE,
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
                                 modifier = Modifier
@@ -285,7 +299,11 @@ fun AdminScreen(
                                     Text(ch.name, style = MaterialTheme.typography.titleSmall)
                                     Text("${ch.handle} • ${formatCount(ch.subscriberCount)} subs", style = MaterialTheme.typography.bodySmall)
                                 }
-                                OutlinedButton(onClick = { onSetChannelSuspended(ch.id, !ch.isSuspended) }) {
+                                LiquidGlassButton(
+                                    onClick = { onSetChannelSuspended(ch.id, !ch.isSuspended) },
+                                    isPrimary = false,
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                                ) {
                                     Text(if (ch.isSuspended) "Restore" else "Suspend")
                                 }
                             }
@@ -296,20 +314,25 @@ fun AdminScreen(
                 4 -> {
                     if (dashboard.reports.isEmpty()) {
                         item {
-                            Text(
-                                "No moderation reports submitted.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            LiquidGlassCard(shape = RoundedCornerShape(18.dp), intensity = GlassIntensity.SUBTLE) {
+                                Text(
+                                    "No moderation reports submitted.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(20.dp)
+                                )
+                            }
                         }
                     } else {
                         items(dashboard.reports, key = { it.id }) { rep ->
-                            Surface(
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-                                shape = RoundedCornerShape(14.dp),
-                                modifier = Modifier.testTag("admin_report_${rep.id}")
+                            LiquidGlassCard(
+                                shape = RoundedCornerShape(18.dp),
+                                intensity = GlassIntensity.REGULAR,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("admin_report_${rep.id}")
                             ) {
-                                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween
@@ -331,10 +354,25 @@ fun AdminScreen(
                                     }
                                     if (rep.status == "PENDING") {
                                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                            Button(onClick = { onResolveReport(rep, "REMOVE") }) { Text("Remove") }
-                                            OutlinedButton(onClick = { onResolveReport(rep, "APPROVE") }) { Text("Approve") }
-                                            OutlinedButton(onClick = { onResolveReport(rep, "REJECT") }) { Text("Reject") }
-                                            OutlinedButton(onClick = { onResolveReport(rep, "SUSPEND_ACCOUNT") }) {
+                                            LiquidGlassButton(
+                                                onClick = { onResolveReport(rep, "REMOVE") },
+                                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                                            ) { Text("Remove") }
+                                            LiquidGlassButton(
+                                                onClick = { onResolveReport(rep, "APPROVE") },
+                                                isPrimary = false,
+                                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                                            ) { Text("Approve") }
+                                            LiquidGlassButton(
+                                                onClick = { onResolveReport(rep, "REJECT") },
+                                                isPrimary = false,
+                                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                                            ) { Text("Reject") }
+                                            LiquidGlassButton(
+                                                onClick = { onResolveReport(rep, "SUSPEND_ACCOUNT") },
+                                                isPrimary = false,
+                                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                                            ) {
                                                 Text("Suspend", color = DskRed)
                                             }
                                         }
@@ -354,28 +392,27 @@ fun AdminScreen(
         var category by remember { mutableStateOf(categories.firstOrNull()?.name ?: "Technology") }
         var isShort by remember { mutableStateOf(false) }
 
-        AlertDialog(
+        LiquidGlassDialog(
             onDismissRequest = { showAddUrlDialog = false },
-            title = { Text("Add Video / Short by Direct URL") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            title = "Add Video / Short by Direct URL",
+            content = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(selected = !isShort, onClick = { isShort = false }, label = { Text("Video") })
-                        FilterChip(selected = isShort, onClick = { isShort = true }, label = { Text("Short") })
+                        LiquidGlassChip(selected = !isShort, onClick = { isShort = false }, label = "Video")
+                        LiquidGlassChip(selected = isShort, onClick = { isShort = true }, label = "Short")
                     }
-                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Title") })
-                    OutlinedTextField(value = url, onValueChange = { url = it }, label = { Text("Direct MP4/WebM URL") })
-                    OutlinedTextField(value = category, onValueChange = { category = it }, label = { Text("Category") })
+                    LiquidGlassTextField(value = title, onValueChange = { title = it }, label = "Title", modifier = Modifier.fillMaxWidth())
+                    LiquidGlassTextField(value = url, onValueChange = { url = it }, label = "Direct MP4/WebM URL", modifier = Modifier.fillMaxWidth())
+                    LiquidGlassTextField(value = category, onValueChange = { category = it }, label = "Category", modifier = Modifier.fillMaxWidth())
                 }
             },
-            confirmButton = {
-                Button(onClick = {
+            actions = {
+                TextButton(onClick = { showAddUrlDialog = false }) { Text("Cancel") }
+                Spacer(Modifier.width(8.dp))
+                LiquidGlassButton(onClick = {
                     onAddDirectUrlVideo(title, url, category, isShort)
                     showAddUrlDialog = false
                 }) { Text("Publish") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddUrlDialog = false }) { Text("Cancel") }
             }
         )
     }
@@ -385,24 +422,23 @@ fun AdminScreen(
         var category by remember { mutableStateOf(vid.category) }
         var section by remember { mutableStateOf(vid.sectionTag) }
 
-        AlertDialog(
+        LiquidGlassDialog(
             onDismissRequest = { editingVideo = null },
-            title = { Text("Edit Video Metadata") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Title") })
-                    OutlinedTextField(value = category, onValueChange = { category = it }, label = { Text("Category") })
-                    OutlinedTextField(value = section, onValueChange = { section = it }, label = { Text("Homepage Section") })
+            title = "Edit Video Metadata",
+            content = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    LiquidGlassTextField(value = title, onValueChange = { title = it }, label = "Title", modifier = Modifier.fillMaxWidth())
+                    LiquidGlassTextField(value = category, onValueChange = { category = it }, label = "Category", modifier = Modifier.fillMaxWidth())
+                    LiquidGlassTextField(value = section, onValueChange = { section = it }, label = "Homepage Section", modifier = Modifier.fillMaxWidth())
                 }
             },
-            confirmButton = {
-                Button(onClick = {
+            actions = {
+                TextButton(onClick = { editingVideo = null }) { Text("Cancel") }
+                Spacer(Modifier.width(8.dp))
+                LiquidGlassButton(onClick = {
                     onEditVideo(vid, title, category, section)
                     editingVideo = null
                 }) { Text("Save") }
-            },
-            dismissButton = {
-                TextButton(onClick = { editingVideo = null }) { Text("Cancel") }
             }
         )
     }
@@ -410,14 +446,14 @@ fun AdminScreen(
 
 @Composable
 private fun StatTile(label: String, value: String, modifier: Modifier = Modifier) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-        shape = RoundedCornerShape(14.dp),
+    LiquidGlassCard(
+        shape = RoundedCornerShape(20.dp),
+        intensity = GlassIntensity.REGULAR,
         modifier = modifier
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(6.dp))
             Text(value, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
         }
     }

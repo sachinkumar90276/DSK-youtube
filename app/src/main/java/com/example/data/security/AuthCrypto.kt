@@ -1,6 +1,5 @@
 package com.example.data.security
 
-import android.util.Base64
 import android.util.Patterns
 import java.security.MessageDigest
 import java.security.SecureRandom
@@ -12,25 +11,32 @@ object AuthCrypto {
     private const val KEY_LENGTH_BITS = 256
     private val random = SecureRandom()
 
+    private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it) }
+
+    private fun String.fromHex(): ByteArray {
+        check(length % 2 == 0) { "Invalid hex string" }
+        return chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+    }
+
     fun generateSalt(): String {
         val salt = ByteArray(16)
         random.nextBytes(salt)
-        return Base64.encodeToString(salt, Base64.NO_WRAP)
+        return salt.toHex()
     }
 
-    fun hashPassword(password: String, saltBase64: String): String {
-        val salt = Base64.decode(saltBase64, Base64.NO_WRAP)
+    fun hashPassword(password: String, saltHex: String): String {
+        val salt = saltHex.fromHex()
         val spec = PBEKeySpec(password.toCharArray(), salt, ITERATIONS, KEY_LENGTH_BITS)
         val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
         val hash = factory.generateSecret(spec).encoded
-        return Base64.encodeToString(hash, Base64.NO_WRAP)
+        return hash.toHex()
     }
 
-    fun verifyPassword(password: String, saltBase64: String, expectedHashBase64: String): Boolean {
-        val computed = hashPassword(password, saltBase64)
+    fun verifyPassword(password: String, saltHex: String, expectedHashHex: String): Boolean {
+        val computed = hashPassword(password, saltHex)
         return MessageDigest.isEqual(
             computed.toByteArray(Charsets.UTF_8),
-            expectedHashBase64.toByteArray(Charsets.UTF_8)
+            expectedHashHex.toByteArray(Charsets.UTF_8)
         )
     }
 

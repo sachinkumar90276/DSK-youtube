@@ -6,8 +6,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.UserSettings
 import com.example.data.local.entity.*
+import com.example.data.remote.VideoRestrictionInfo
+import com.example.data.remote.YouTubeSearchBundle
+import com.example.data.remote.YouTubeSyncState
 import com.example.data.repository.DskRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -16,6 +20,13 @@ sealed interface UploadUiState {
     data class Uploading(val progress: Int, val status: String) : UploadUiState
     data class Success(val contentId: String, val isShort: Boolean) : UploadUiState
     data class Error(val message: String) : UploadUiState
+}
+
+sealed interface LiveSearchUiState {
+    data object Idle : LiveSearchUiState
+    data object Searching : LiveSearchUiState
+    data class Results(val query: String, val bundle: YouTubeSearchBundle) : LiveSearchUiState
+    data class Error(val message: String) : LiveSearchUiState
 }
 
 data class AdminDashboardState(
@@ -241,8 +252,100 @@ class DskViewModel(private val repo: DskRepository) : ViewModel() {
     private val _uploadState = MutableStateFlow<UploadUiState>(UploadUiState.Idle)
     val uploadState: StateFlow<UploadUiState> = _uploadState.asStateFlow()
 
+    private val _youtubeSyncState = MutableStateFlow<YouTubeSyncState>(YouTubeSyncState.Idle)
+    val youtubeSyncState: StateFlow<YouTubeSyncState> = _youtubeSyncState.asStateFlow()
+
+    private val _liveSearchState = MutableStateFlow<LiveSearchUiState>(LiveSearchUiState.Idle)
+    val liveSearchState: StateFlow<LiveSearchUiState> = _liveSearchState.asStateFlow()
+
+    private val _loadedWatchVideo = MutableStateFlow<VideoWithChannel?>(null)
+    val loadedWatchVideo: StateFlow<VideoWithChannel?> = _loadedWatchVideo.asStateFlow()
+
+    private val _watchVideoRestriction = MutableStateFlow<Pair<String, VideoRestrictionInfo>?>(null)
+    val watchVideoRestriction: StateFlow<Pair<String, VideoRestrictionInfo>?> = _watchVideoRestriction.asStateFlow()
+
     private val _uiMessage = MutableStateFlow<String?>(null)
     val uiMessage: StateFlow<String?> = _uiMessage.asStateFlow()
+
+    init {
+        refreshYouTubeHome(force = false)
+        // Background periodic refresh: respects 3-min Live / 10-min Home caching & auto-retries after quota backoff
+        viewModelScope.launch {
+            while (true) {
+                delay(180_000L)
+                if (_youtubeSyncState.value !is YouTubeSyncState.Refreshing) {
+                    val result = repo.syncYouTubeHome(force = false)
+                    _youtubeSyncState.value = result
+                }
+            }
+        }
+    }
+
+    fun refreshYouTubeHome(force: Boolean = true) {
+        viewModelScope.launch {
+            _youtubeSyncState.value = YouTubeSyncState.Refreshing
+            val result = repo.syncYouTubeHome(force = force)
+            _youtubeSyncState.value = result
+            if (result is YouTubeSyncState.QuotaExceeded) {
+                viewModelScope.launch {
+                    delay(60_000L)
+                    if (_youtubeSyncState.value is YouTubeSyncState.QuotaExceeded) {
+                        refreshYouTubeHome(force = true)
+                    }
+                }
+            }
+        }
+    }
+
+    fun refreshCategory(category: String) {
+        viewModelScope.launch {
+            _youtubeSyncState.value = YouTubeSyncState.Refreshing
+            _youtubeSyncState.value = repo.syncYouTubeCategory(category, force = false)
+        }
+    }
+
+    fun refreshChannel(channelId: String) {
+        viewModelScope.launch {
+            val state = repo.syncYouTubeChannel(channelId, force = false)
+            if (state !is YouTubeSyncState.MissingApiKey) {
+                _youtubeSyncState.value = state
+            }
+        }
+    }
+
+    fun ensureVideoLoaded(videoId: String) {
+        viewModelScope.launch {
+            val restriction = repo.checkVideoRestrictions(videoId)
+            _watchVideoRestriction.value = videoId to restriction
+            val loaded = repo.fetchVideoById(videoId)
+            if (loaded != null) {
+                _loadedWatchVideo.value = loaded
+                _watchVideoRestriction.value = videoId to repo.checkVideoRestrictions(videoId)
+            }
+        }
+    }
+
+    fun searchYouTubeLive(query: String, typeFilter: String, categoryFilter: String, sortBy: String) {
+        val clean = query.trim()
+        if (clean.isEmpty()) {
+            _liveSearchState.value = LiveSearchUiState.Idle
+            return
+        }
+        viewModelScope.launch {
+            _liveSearchState.value = LiveSearchUiState.Searching
+            repo.searchYouTubeLive(clean, typeFilter, categoryFilter, sortBy)
+                .onSuccess { bundle ->
+                    _liveSearchState.value = LiveSearchUiState.Results(clean, bundle)
+                }
+                .onFailure { err ->
+                    _liveSearchState.value = LiveSearchUiState.Error(err.message ?: "YouTube search failed.")
+                }
+        }
+    }
+
+    fun clearLiveSearch() {
+        _liveSearchState.value = LiveSearchUiState.Idle
+    }
 
     fun consumeMessage() {
         _uiMessage.value = null

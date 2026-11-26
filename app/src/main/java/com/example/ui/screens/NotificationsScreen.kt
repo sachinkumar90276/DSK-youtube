@@ -1,12 +1,10 @@
 package com.example.ui.screens
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -14,6 +12,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.data.local.entity.NotificationEntity
+import com.example.ui.components.GlassIntensity
+import com.example.ui.components.LiquidGlassCard
+import com.example.ui.components.LiquidGlassTopBar
 import com.example.ui.theme.DskRed
 import com.example.ui.util.formatRelativeTime
 
@@ -30,19 +31,10 @@ fun NotificationsScreen(
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+        LiquidGlassTopBar(
+            title = "Notifications",
+            onBack = onBack
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
-                }
-                Text("Notifications", style = MaterialTheme.typography.titleLarge)
-            }
             if (notifications.any { !it.isRead }) {
                 TextButton(onClick = onMarkAllRead) {
                     Text("Mark all read", color = DskRed)
@@ -51,20 +43,26 @@ fun NotificationsScreen(
         }
 
         if (notifications.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Outlined.NotificationsNone, contentDescription = null, modifier = Modifier.size(48.dp))
-                    Text("No notifications yet", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        "Get alerts for subscribed uploads, comment replies, likes, and completed uploads.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+            Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+                LiquidGlassCard(shape = RoundedCornerShape(24.dp), intensity = GlassIntensity.REGULAR) {
+                    Column(
+                        modifier = Modifier.padding(28.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(Icons.Outlined.NotificationsNone, contentDescription = null, modifier = Modifier.size(48.dp), tint = DskRed)
+                        Text("No notifications yet", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Get alerts for subscribed uploads, comment replies, likes, and completed uploads.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         } else {
             LazyColumn(
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(14.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(notifications, key = { it.id }) { n ->
@@ -74,15 +72,14 @@ fun NotificationsScreen(
                         "LIKE" -> Icons.Outlined.ThumbUp
                         else -> Icons.Outlined.Subscriptions
                     }
-                    Surface(
-                        color = if (n.isRead) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                        else DskRed.copy(alpha = 0.14f),
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                if (!n.targetId.isNullOrBlank()) onOpenVideo(n.targetId)
-                            }
+                    LiquidGlassCard(
+                        shape = RoundedCornerShape(18.dp),
+                        intensity = if (n.isRead) GlassIntensity.SUBTLE else GlassIntensity.REGULAR,
+                        selected = !n.isRead,
+                        onClick = {
+                            if (!n.targetId.isNullOrBlank()) onOpenVideo(n.targetId)
+                        },
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
                             modifier = Modifier.padding(14.dp),

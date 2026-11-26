@@ -1,17 +1,15 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.PlaylistPlay
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -28,10 +26,8 @@ import com.example.data.local.entity.ChannelEntity
 import com.example.data.local.entity.PlaylistSummary
 import com.example.data.local.entity.ShortWithChannel
 import com.example.data.local.entity.VideoWithChannel
-import com.example.ui.components.ChannelAvatar
-import com.example.ui.components.CompactVideoRow
+import com.example.ui.components.*
 import com.example.ui.theme.DskRed
-import com.example.ui.theme.DskWhite
 import com.example.ui.util.formatCount
 import com.example.ui.util.formatRelativeTime
 
@@ -43,6 +39,7 @@ fun ChannelScreen(
     channelPlaylists: List<PlaylistSummary>,
     isSubscribed: Boolean,
     onBack: () -> Unit,
+    onRefreshChannel: () -> Unit = {},
     onToggleSubscribe: () -> Unit,
     onShareChannel: () -> Unit,
     onReportChannel: () -> Unit,
@@ -59,27 +56,21 @@ fun ChannelScreen(
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
-        // Top App Bar
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+        LiquidGlassTopBar(
+            title = channel.name,
+            subtitle = channel.handle,
+            onBack = onBack
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack, modifier = Modifier.minimumInteractiveComponentSize()) {
-                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
+            if (channel.sourceType == "YOUTUBE") {
+                LiquidGlassIconButton(onClick = onRefreshChannel, size = 38.dp, intensity = GlassIntensity.SUBTLE) {
+                    Icon(Icons.Outlined.Refresh, contentDescription = "Refresh channel", modifier = Modifier.size(18.dp))
                 }
-                Text(channel.name, style = MaterialTheme.typography.titleLarge)
             }
-            Row {
-                IconButton(onClick = onShareChannel) {
-                    Icon(Icons.Outlined.Share, contentDescription = "Share channel")
-                }
-                IconButton(onClick = onReportChannel) {
-                    Icon(Icons.Outlined.Flag, contentDescription = "Report channel")
-                }
+            LiquidGlassIconButton(onClick = onShareChannel, size = 38.dp, intensity = GlassIntensity.SUBTLE) {
+                Icon(Icons.Outlined.Share, contentDescription = "Share channel", modifier = Modifier.size(18.dp))
+            }
+            LiquidGlassIconButton(onClick = onReportChannel, size = 38.dp, intensity = GlassIntensity.SUBTLE) {
+                Icon(Icons.Outlined.Flag, contentDescription = "Report channel", modifier = Modifier.size(18.dp))
             }
         }
 
@@ -88,16 +79,23 @@ fun ChannelScreen(
             contentPadding = PaddingValues(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Banner + Channel Identity
+            // Banner + Channel Identity Glass Card
             item {
-                Column(modifier = Modifier.fillMaxWidth()) {
+                LiquidGlassCard(
+                    shape = RoundedCornerShape(24.dp),
+                    intensity = GlassIntensity.REGULAR,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp)
+                ) {
                     if (!channel.bannerUri.isNullOrBlank()) {
                         AsyncImage(
                             model = channel.bannerUri,
                             contentDescription = "${channel.name} banner",
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(132.dp),
+                                .height(132.dp)
+                                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
                             contentScale = ContentScale.Crop
                         )
                     } else {
@@ -106,7 +104,8 @@ fun ChannelScreen(
                             contentDescription = "${channel.name} banner",
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(132.dp),
+                                .height(132.dp)
+                                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
                             contentScale = ContentScale.Crop
                         )
                     }
@@ -129,16 +128,12 @@ fun ChannelScreen(
                         }
                     }
 
-                    Button(
+                    LiquidGlassButton(
                         onClick = onToggleSubscribe,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isSubscribed) MaterialTheme.colorScheme.surfaceVariant else DskRed,
-                            contentColor = if (isSubscribed) MaterialTheme.colorScheme.onSurface else DskWhite
-                        ),
-                        shape = RoundedCornerShape(99.dp),
+                        isPrimary = !isSubscribed,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
+                            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                     ) {
                         Text(
                             text = if (isSubscribed) "Subscribed (Free)" else "Subscribe — Free",
@@ -148,17 +143,13 @@ fun ChannelScreen(
                 }
             }
 
-            // Tabs
+            // Glass Segmented Tabs
             item {
-                TabRow(selectedTabIndex = selectedTab) {
-                    tabs.forEachIndexed { idx, label ->
-                        Tab(
-                            selected = selectedTab == idx,
-                            onClick = { selectedTab = idx },
-                            text = { Text(label) }
-                        )
-                    }
-                }
+                LiquidGlassSegmentedTabs(
+                    tabs = tabs,
+                    selectedIndex = selectedTab,
+                    onSelect = { selectedTab = it }
+                )
             }
 
             when (selectedTab) {
@@ -167,7 +158,7 @@ fun ChannelScreen(
                         item { EmptyTabText("No videos uploaded by this channel yet.") }
                     } else {
                         items(channelVideos, key = { it.video.id }) { item ->
-                            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            Box(modifier = Modifier.padding(horizontal = 14.dp)) {
                                 CompactVideoRow(item = item, onClick = { onVideoClick(item.video.id) })
                             }
                         }
@@ -178,14 +169,13 @@ fun ChannelScreen(
                         item { EmptyTabText("No Shorts uploaded by this channel yet.") }
                     } else {
                         items(channelShorts, key = { it.shortItem.id }) { s ->
-                            Surface(
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                shape = RoundedCornerShape(12.dp),
+                            LiquidGlassCard(
+                                shape = RoundedCornerShape(16.dp),
+                                intensity = GlassIntensity.SUBTLE,
+                                onClick = { onShortClick(s.shortItem.id) },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable { onShortClick(s.shortItem.id) }
+                                    .padding(horizontal = 14.dp)
                             ) {
                                 Row(
                                     modifier = Modifier.padding(14.dp),
@@ -211,13 +201,13 @@ fun ChannelScreen(
                         item { EmptyTabText("No public playlists on this channel.") }
                     } else {
                         items(channelPlaylists, key = { it.playlist.id }) { pl ->
-                            Surface(
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                shape = RoundedCornerShape(12.dp),
+                            LiquidGlassCard(
+                                shape = RoundedCornerShape(16.dp),
+                                intensity = GlassIntensity.SUBTLE,
+                                onClick = { onPlaylistClick(pl.playlist.id) },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp)
-                                    .clickable { onPlaylistClick(pl.playlist.id) }
+                                    .padding(horizontal = 14.dp)
                             ) {
                                 Row(
                                     modifier = Modifier.padding(14.dp),
@@ -240,12 +230,12 @@ fun ChannelScreen(
                 }
                 3 -> {
                     item {
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                            shape = RoundedCornerShape(14.dp),
+                        LiquidGlassCard(
+                            shape = RoundedCornerShape(18.dp),
+                            intensity = GlassIntensity.REGULAR,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
+                                .padding(horizontal = 14.dp)
                         ) {
                             Column(
                                 modifier = Modifier.padding(16.dp),
@@ -256,7 +246,7 @@ fun ChannelScreen(
                                     channel.description.ifBlank { "Creator on DSK YouTube." },
                                     style = MaterialTheme.typography.bodyMedium
                                 )
-                                HorizontalDivider()
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
                                 Text(
                                     "Total views: ${formatCount(channelVideos.sumOf { it.video.viewCount } + channelShorts.sumOf { it.shortItem.viewCount })}",
                                     style = MaterialTheme.typography.bodySmall
@@ -277,12 +267,20 @@ fun ChannelScreen(
 
 @Composable
 private fun EmptyTabText(msg: String) {
-    Box(
+    LiquidGlassCard(
+        shape = RoundedCornerShape(18.dp),
+        intensity = GlassIntensity.SUBTLE,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(28.dp),
-        contentAlignment = Alignment.Center
+            .padding(horizontal = 14.dp)
     ) {
-        Text(msg, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(28.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(msg, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }

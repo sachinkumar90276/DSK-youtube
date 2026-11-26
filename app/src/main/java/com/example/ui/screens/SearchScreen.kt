@@ -1,6 +1,5 @@
 package com.example.ui.screens
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -16,14 +15,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.example.data.local.entity.*
-import com.example.ui.components.ChannelAvatar
-import com.example.ui.components.CompactVideoRow
+import com.example.ui.components.*
 import com.example.ui.theme.DskRed
+import com.example.ui.theme.DskWarning
 import com.example.ui.theme.DskWhite
 import com.example.ui.util.formatCount
+import com.example.viewmodel.LiveSearchUiState
 
 @Composable
 fun SearchScreen(
@@ -32,8 +33,11 @@ fun SearchScreen(
     channels: List<ChannelEntity>,
     categories: List<CategoryEntity>,
     searchHistory: List<SearchHistoryEntity>,
+    liveSearchState: LiveSearchUiState,
     onBack: () -> Unit,
     onRecordSearch: (String) -> Unit,
+    onSearchYouTube: (query: String, typeFilter: String, categoryFilter: String, sortBy: String) -> Unit,
+    onClearLiveSearch: () -> Unit,
     onDeleteSearchQuery: (String) -> Unit,
     onClearSearchHistory: () -> Unit,
     onVideoClick: (String) -> Unit,
@@ -45,6 +49,17 @@ fun SearchScreen(
     var typeFilter by remember { mutableStateOf("All") } // All, Videos, Shorts, Channels
     var categoryFilter by remember { mutableStateOf("All") }
     var sortBy by remember { mutableStateOf("Relevance") } // Relevance, Newest, Views
+
+    fun triggerSearch(q: String, type: String = typeFilter, cat: String = categoryFilter, sort: String = sortBy) {
+        val trimmed = q.trim()
+        submittedQuery = trimmed
+        if (trimmed.isNotEmpty()) {
+            onRecordSearch(trimmed)
+            onSearchYouTube(trimmed, type, cat, sort)
+        } else {
+            onClearLiveSearch()
+        }
+    }
 
     val suggestions = remember(query, videos, channels, categories) {
         val q = query.trim().lowercase()
@@ -60,8 +75,11 @@ fun SearchScreen(
     }
 
     val activeQ = submittedQuery.trim().lowercase().ifEmpty { query.trim().lowercase() }
+    val activeLiveResults = (liveSearchState as? LiveSearchUiState.Results)
+        ?.takeIf { it.query.equals(submittedQuery.trim(), ignoreCase = true) }
+        ?.bundle
 
-    val matchingVideos = remember(videos, activeQ, categoryFilter, sortBy) {
+    val cachedVideos = remember(videos, activeQ, categoryFilter, sortBy) {
         val base = videos.filter { item ->
             val matchesQ = activeQ.isEmpty() ||
                 item.video.title.lowercase().contains(activeQ) ||
@@ -79,7 +97,7 @@ fun SearchScreen(
         }
     }
 
-    val matchingShorts = remember(shorts, activeQ, sortBy) {
+    val cachedShorts = remember(shorts, activeQ, sortBy) {
         val base = shorts.filter { item ->
             activeQ.isEmpty() ||
                 item.shortItem.title.lowercase().contains(activeQ) ||
@@ -93,7 +111,7 @@ fun SearchScreen(
         }
     }
 
-    val matchingChannels = remember(channels, activeQ) {
+    val cachedChannels = remember(channels, activeQ) {
         channels.filter { ch ->
             !ch.isSuspended && (activeQ.isEmpty() ||
                 ch.name.lowercase().contains(activeQ) ||
@@ -102,110 +120,186 @@ fun SearchScreen(
         }
     }
 
+    val matchingVideos = remember(activeLiveResults, cachedVideos) {
+        if (activeLiveResults != null) {
+            (activeLiveResults.videos + cachedVideos.filter { it.video.sourceType != "YOUTUBE" })
+                .distinctBy { it.video.id }
+        } else cachedVideos
+    }
+
+    val matchingShorts = remember(activeLiveResults, cachedShorts) {
+        if (activeLiveResults != null) {
+            (activeLiveResults.shorts + cachedShorts.filter { it.shortItem.sourceType != "YOUTUBE" })
+                .distinctBy { it.shortItem.id }
+        } else cachedShorts
+    }
+
+    val matchingChannels = remember(activeLiveResults, cachedChannels) {
+        if (activeLiveResults != null) {
+            (activeLiveResults.channels + cachedChannels.filter { it.sourceType != "YOUTUBE" })
+                .distinctBy { it.id }
+        } else cachedChannels
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
-        // Search Input Bar
-        Row(
+        // Floating Liquid Glass Search Bar Header
+        LiquidGlassCard(
+            shape = RoundedCornerShape(26.dp),
+            intensity = GlassIntensity.STRONG,
+            elevation = 12.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
-            IconButton(onClick = onBack, modifier = Modifier.minimumInteractiveComponentSize()) {
-                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
-            }
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                placeholder = { Text("Search videos, shorts, channels...") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = {
-                    submittedQuery = query
-                    onRecordSearch(query)
-                }),
-                trailingIcon = {
-                    if (query.isNotEmpty()) {
-                        IconButton(onClick = {
-                            query = ""
-                            submittedQuery = ""
-                        }) {
-                            Icon(Icons.Outlined.Close, contentDescription = "Clear search")
-                        }
-                    }
-                },
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .testTag("search_input")
-            )
-            IconButton(
-                onClick = {
-                    submittedQuery = query
-                    onRecordSearch(query)
-                },
-                modifier = Modifier.testTag("search_submit_button")
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Icon(Icons.Outlined.Search, contentDescription = "Search", tint = DskRed)
+                LiquidGlassIconButton(
+                    onClick = onBack,
+                    size = 40.dp,
+                    intensity = GlassIntensity.SUBTLE
+                ) {
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back", modifier = Modifier.size(20.dp))
+                }
+                LiquidGlassTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    placeholder = "Search YouTube videos, shorts, channels...",
+                    singleLine = true,
+                    shape = RoundedCornerShape(99.dp),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { triggerSearch(query) }),
+                    trailingIcon = {
+                        if (query.isNotEmpty()) {
+                            IconButton(onClick = {
+                                query = ""
+                                submittedQuery = ""
+                                onClearLiveSearch()
+                            }) {
+                                Icon(Icons.Outlined.Close, contentDescription = "Clear search")
+                            }
+                        }
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("search_input")
+                )
+                LiquidGlassIconButton(
+                    onClick = { triggerSearch(query) },
+                    size = 42.dp,
+                    selected = true,
+                    intensity = GlassIntensity.STRONG,
+                    modifier = Modifier.testTag("search_submit_button")
+                ) {
+                    Icon(Icons.Outlined.Search, contentDescription = "Search", tint = DskWhite, modifier = Modifier.size(20.dp))
+                }
             }
+        }
+
+        if (liveSearchState is LiveSearchUiState.Searching) {
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                color = DskRed
+            )
         }
 
         // Type Filters + Sort Row
         LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(listOf("All", "Videos", "Shorts", "Channels")) { type ->
-                FilterChip(
+                LiquidGlassChip(
                     selected = typeFilter == type,
-                    onClick = { typeFilter = type },
-                    label = { Text(type) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = DskRed,
-                        selectedLabelColor = DskWhite
-                    )
+                    onClick = {
+                        typeFilter = type
+                        if (submittedQuery.isNotBlank()) triggerSearch(submittedQuery, type = type)
+                    },
+                    label = type
                 )
             }
             items(listOf("Relevance", "Newest", "Views")) { sort ->
-                FilterChip(
+                LiquidGlassChip(
                     selected = sortBy == sort,
-                    onClick = { sortBy = sort },
-                    leadingIcon = { Icon(Icons.Outlined.Sort, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                    label = { Text(sort) }
+                    onClick = {
+                        sortBy = sort
+                        if (submittedQuery.isNotBlank()) triggerSearch(submittedQuery, sort = sort)
+                    },
+                    leadingIcon = Icons.Outlined.Sort,
+                    label = sort
                 )
             }
         }
 
         // Category filter row
         LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item {
-                FilterChip(
+                LiquidGlassChip(
                     selected = categoryFilter == "All",
-                    onClick = { categoryFilter = "All" },
-                    label = { Text("All Categories") }
+                    onClick = {
+                        categoryFilter = "All"
+                        if (submittedQuery.isNotBlank()) triggerSearch(submittedQuery, cat = "All")
+                    },
+                    label = "All Categories"
                 )
             }
             items(categories) { cat ->
-                FilterChip(
+                LiquidGlassChip(
                     selected = categoryFilter == cat.name,
-                    onClick = { categoryFilter = cat.name },
-                    label = { Text(cat.name) }
+                    onClick = {
+                        categoryFilter = cat.name
+                        if (submittedQuery.isNotBlank()) triggerSearch(submittedQuery, cat = cat.name)
+                    },
+                    label = cat.name
                 )
             }
         }
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // History & Suggestions when query hasn't been submitted yet or is empty
+            if (liveSearchState is LiveSearchUiState.Error) {
+                item {
+                    LiquidGlassCard(
+                        shape = RoundedCornerShape(16.dp),
+                        accentTint = DskWarning,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = liveSearchState.message,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(1f)
+                            )
+                            TextButton(onClick = { triggerSearch(submittedQuery.ifBlank { query }) }) {
+                                Text("Retry", color = DskRed, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // History & Suggestions
             if (query.isBlank() && searchHistory.isNotEmpty()) {
                 item {
                     Row(
@@ -220,21 +314,28 @@ fun SearchScreen(
                     }
                 }
                 items(searchHistory, key = { it.id }) { hist ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                query = hist.query
-                                submittedQuery = hist.query
-                            }
-                            .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    LiquidGlassCard(
+                        shape = RoundedCornerShape(16.dp),
+                        intensity = GlassIntensity.SUBTLE,
+                        elevation = 2.dp,
+                        onClick = {
+                            query = hist.query
+                            triggerSearch(hist.query)
+                        },
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(Icons.Outlined.History, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.width(12.dp))
-                        Text(hist.query, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                        IconButton(onClick = { onDeleteSearchQuery(hist.id) }) {
-                            Icon(Icons.Outlined.Close, contentDescription = "Remove search item")
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Outlined.History, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.width(12.dp))
+                            Text(hist.query, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                            IconButton(onClick = { onDeleteSearchQuery(hist.id) }) {
+                                Icon(Icons.Outlined.Close, contentDescription = "Remove search item")
+                            }
                         }
                     }
                 }
@@ -242,20 +343,26 @@ fun SearchScreen(
 
             if (query.isNotBlank() && suggestions.isNotEmpty() && submittedQuery != query) {
                 items(suggestions) { sug ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                query = sug
-                                submittedQuery = sug
-                                onRecordSearch(sug)
-                            }
-                            .padding(vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    LiquidGlassCard(
+                        shape = RoundedCornerShape(16.dp),
+                        intensity = GlassIntensity.SUBTLE,
+                        elevation = 2.dp,
+                        onClick = {
+                            query = sug
+                            triggerSearch(sug)
+                        },
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(Icons.Outlined.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.width(12.dp))
-                        Text(sug, style = MaterialTheme.typography.bodyMedium)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Outlined.Search, contentDescription = null, tint = DskRed)
+                            Spacer(Modifier.width(12.dp))
+                            Text(sug, style = MaterialTheme.typography.bodyMedium)
+                        }
                     }
                 }
             }
@@ -266,12 +373,11 @@ fun SearchScreen(
                         Text("Channels (${matchingChannels.size})", style = MaterialTheme.typography.titleMedium)
                     }
                     items(matchingChannels, key = { it.id }) { ch ->
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(14.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onChannelClick(ch.id) }
+                        LiquidGlassCard(
+                            shape = RoundedCornerShape(18.dp),
+                            intensity = GlassIntensity.REGULAR,
+                            onClick = { onChannelClick(ch.id) },
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
                                 modifier = Modifier.padding(12.dp),
@@ -299,12 +405,11 @@ fun SearchScreen(
                         Text("Shorts (${matchingShorts.size})", style = MaterialTheme.typography.titleMedium)
                     }
                     items(matchingShorts, key = { it.shortItem.id }) { s ->
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onShortClick(s.shortItem.id) }
+                        LiquidGlassCard(
+                            shape = RoundedCornerShape(16.dp),
+                            intensity = GlassIntensity.SUBTLE,
+                            onClick = { onShortClick(s.shortItem.id) },
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
                                 modifier = Modifier.padding(12.dp),
@@ -339,17 +444,23 @@ fun SearchScreen(
 
             if (matchingVideos.isEmpty() && matchingShorts.isEmpty() && matchingChannels.isEmpty()) {
                 item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        contentAlignment = Alignment.Center
+                    LiquidGlassCard(
+                        shape = RoundedCornerShape(20.dp),
+                        intensity = GlassIntensity.SUBTLE,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(
-                            "No results found for \"$activeQ\".",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "No results found for \"$activeQ\".",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }

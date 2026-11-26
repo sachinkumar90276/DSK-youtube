@@ -18,9 +18,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.local.entity.CategoryEntity
+import com.example.ui.components.*
 import com.example.ui.theme.DskRed
 import com.example.ui.theme.DskSuccess
-import com.example.ui.theme.DskWhite
 import com.example.viewmodel.UploadUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,23 +54,30 @@ fun UploadScreen(
                 .padding(24.dp),
             contentAlignment = Alignment.Center
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            LiquidGlassCard(
+                shape = RoundedCornerShape(26.dp),
+                intensity = GlassIntensity.REGULAR,
+                accentTint = DskRed,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(Icons.Outlined.CloudUpload, contentDescription = null, modifier = Modifier.size(56.dp), tint = DskRed)
-                Text("Sign in to Publish Videos & Shorts", style = MaterialTheme.typography.headlineSmall)
-                Text(
-                    "Uploading is 100% free on DSK YouTube. Sign in or create a free creator account to start publishing.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Button(
-                    onClick = onRequireSignIn,
-                    colors = ButtonDefaults.buttonColors(containerColor = DskRed),
-                    modifier = Modifier.testTag("upload_signin_button")
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("Sign In / Register")
+                    Icon(Icons.Outlined.CloudUpload, contentDescription = null, modifier = Modifier.size(56.dp), tint = DskRed)
+                    Text("Sign in to Publish Videos & Shorts", style = MaterialTheme.typography.headlineSmall)
+                    Text(
+                        "Uploading is 100% free on DSK YouTube. Sign in or create a free creator account to start publishing.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    LiquidGlassButton(
+                        onClick = onRequireSignIn,
+                        modifier = Modifier.testTag("upload_signin_button")
+                    ) {
+                        Text("Sign In / Register", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
@@ -122,47 +129,56 @@ fun UploadScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text("Create & Upload", style = MaterialTheme.typography.headlineMedium)
-        Text(
-            "Free Creator Studio • Max 100 MB per local file or paste a direct MP4/WebM stream URL.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        LiquidGlassCard(
+            shape = RoundedCornerShape(22.dp),
+            intensity = GlassIntensity.STRONG,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Create & Upload", style = MaterialTheme.typography.headlineMedium)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Free Creator Studio • Max 100 MB per local file or paste a direct MP4/WebM stream URL.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
 
         // Format Toggle
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            FilterChip(
+            LiquidGlassChip(
                 selected = !isShort,
                 onClick = { isShort = false },
-                leadingIcon = { Icon(Icons.Outlined.VideoLibrary, contentDescription = null) },
-                label = { Text("Standard Video") },
-                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = DskRed, selectedLabelColor = DskWhite)
+                leadingIcon = Icons.Outlined.VideoLibrary,
+                label = "Standard Video"
             )
-            FilterChip(
+            LiquidGlassChip(
                 selected = isShort,
                 onClick = { isShort = true },
-                leadingIcon = { Icon(Icons.Outlined.Bolt, contentDescription = null) },
-                label = { Text("Short (9:16)") },
-                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = DskRed, selectedLabelColor = DskWhite)
+                leadingIcon = Icons.Outlined.Bolt,
+                label = "Short (9:16)"
             )
         }
 
         // Media Source Pickers
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-            shape = RoundedCornerShape(16.dp)
+        LiquidGlassCard(
+            shape = RoundedCornerShape(20.dp),
+            intensity = GlassIntensity.REGULAR,
+            modifier = Modifier.fillMaxWidth()
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedButton(
+                    LiquidGlassButton(
                         onClick = {
                             videoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly))
                         },
+                        isPrimary = false,
                         modifier = Modifier
                             .weight(1f)
                             .testTag("pick_video_button")
@@ -171,10 +187,11 @@ fun UploadScreen(
                         Spacer(Modifier.width(6.dp))
                         Text(if (selectedVideoUri != null) "Video Selected ✓" else "Pick Video")
                     }
-                    OutlinedButton(
+                    LiquidGlassButton(
                         onClick = {
                             thumbPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                         },
+                        isPrimary = false,
                         modifier = Modifier
                             .weight(1f)
                             .testTag("pick_thumb_button")
@@ -184,42 +201,42 @@ fun UploadScreen(
                         Text(if (selectedThumbUri != null) "Thumb Ready ✓" else "Thumbnail")
                     }
                 }
-                OutlinedTextField(
+                LiquidGlassTextField(
                     value = directVideoUrl,
                     onValueChange = { directVideoUrl = it },
-                    label = { Text("Or Direct MP4 / WebM URL") },
-                    placeholder = { Text("https://.../video.mp4") },
+                    label = "Or Direct MP4 / WebM URL",
+                    placeholder = "https://.../video.mp4",
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
         }
 
-        OutlinedTextField(
+        LiquidGlassTextField(
             value = title,
             onValueChange = { title = it },
-            label = { Text("Title *") },
+            label = "Title *",
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag("upload_title_input")
         )
 
-        OutlinedTextField(
+        LiquidGlassTextField(
             value = description,
             onValueChange = { description = it },
-            label = { Text("Description") },
+            label = "Description",
             minLines = 3,
             maxLines = 5,
             modifier = Modifier.fillMaxWidth()
         )
 
         if (isShort) {
-            OutlinedTextField(
+            LiquidGlassTextField(
                 value = musicInfo,
                 onValueChange = { musicInfo = it },
-                label = { Text("Music / Audio Track") },
-                placeholder = { Text("Original Sound - Your Channel") },
+                label = "Music / Audio Track",
+                placeholder = "Original Sound - Your Channel",
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -228,11 +245,11 @@ fun UploadScreen(
                 expanded = categoryDropdownExpanded,
                 onExpandedChange = { categoryDropdownExpanded = it }
             ) {
-                OutlinedTextField(
+                LiquidGlassTextField(
                     value = category,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("Category") },
+                    label = "Category",
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryDropdownExpanded) },
                     modifier = Modifier
                         .menuAnchor(MenuAnchorType.PrimaryNotEditable)
@@ -240,7 +257,8 @@ fun UploadScreen(
                 )
                 ExposedDropdownMenu(
                     expanded = categoryDropdownExpanded,
-                    onDismissRequest = { categoryDropdownExpanded = false }
+                    onDismissRequest = { categoryDropdownExpanded = false },
+                    containerColor = glassDropdownContainerColor()
                 ) {
                     categories.forEach { cat ->
                         DropdownMenuItem(
@@ -255,10 +273,10 @@ fun UploadScreen(
             }
         }
 
-        OutlinedTextField(
+        LiquidGlassTextField(
             value = tags,
             onValueChange = { tags = it },
-            label = { Text("Tags (comma separated)") },
+            label = "Tags (comma separated)",
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
@@ -267,29 +285,38 @@ fun UploadScreen(
         Text("Visibility", style = MaterialTheme.typography.titleSmall)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("PUBLIC", "UNLISTED", "PRIVATE").forEach { vis ->
-                FilterChip(
+                LiquidGlassChip(
                     selected = visibility == vis,
                     onClick = { visibility = vis },
-                    label = { Text(vis) }
+                    label = vis
                 )
             }
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        LiquidGlassCard(
+            shape = RoundedCornerShape(18.dp),
+            intensity = GlassIntensity.SUBTLE,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Allow Comments", style = MaterialTheme.typography.bodyMedium)
-            Switch(checked = commentsEnabled, onCheckedChange = { commentsEnabled = it })
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Allow Comments", style = MaterialTheme.typography.bodyMedium)
+                Switch(checked = commentsEnabled, onCheckedChange = { commentsEnabled = it })
+            }
         }
 
-        // Upload Progress / Status Card
+        // Upload Progress / Status Glass Card
         when (uploadState) {
             is UploadUiState.Uploading -> {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    shape = RoundedCornerShape(14.dp)
+                LiquidGlassCard(
+                    shape = RoundedCornerShape(18.dp),
+                    intensity = GlassIntensity.REGULAR,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
                         modifier = Modifier
@@ -313,19 +340,21 @@ fun UploadScreen(
                 }
             }
             is UploadUiState.Success -> {
-                Surface(
-                    color = DskSuccess.copy(alpha = 0.16f),
-                    shape = RoundedCornerShape(14.dp)
+                LiquidGlassCard(
+                    shape = RoundedCornerShape(18.dp),
+                    intensity = GlassIntensity.REGULAR,
+                    accentTint = DskSuccess,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text("Published successfully!", style = MaterialTheme.typography.titleSmall, color = DskSuccess)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            LiquidGlassButton(
                                 onClick = {
                                     onOpenUploadedVideo(uploadState.contentId, uploadState.isShort)
                                     onResetUploadState()
@@ -333,15 +362,18 @@ fun UploadScreen(
                             ) {
                                 Text("Watch Now")
                             }
-                            OutlinedButton(onClick = {
-                                selectedVideoUri = null
-                                directVideoUrl = ""
-                                selectedThumbUri = null
-                                title = ""
-                                description = ""
-                                tags = ""
-                                onResetUploadState()
-                            }) {
+                            LiquidGlassButton(
+                                onClick = {
+                                    selectedVideoUri = null
+                                    directVideoUrl = ""
+                                    selectedThumbUri = null
+                                    title = ""
+                                    description = ""
+                                    tags = ""
+                                    onResetUploadState()
+                                },
+                                isPrimary = false
+                            ) {
                                 Text("Upload Another")
                             }
                         }
@@ -349,9 +381,11 @@ fun UploadScreen(
                 }
             }
             is UploadUiState.Error -> {
-                Surface(
-                    color = DskRed.copy(alpha = 0.16f),
-                    shape = RoundedCornerShape(14.dp)
+                LiquidGlassCard(
+                    shape = RoundedCornerShape(18.dp),
+                    intensity = GlassIntensity.REGULAR,
+                    accentTint = DskRed,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
                         modifier = Modifier
@@ -360,7 +394,7 @@ fun UploadScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(uploadState.message, style = MaterialTheme.typography.bodyMedium, color = DskRed)
-                        OutlinedButton(onClick = { triggerUpload() }) {
+                        LiquidGlassButton(onClick = { triggerUpload() }, isPrimary = false) {
                             Text("Retry Upload")
                         }
                     }
@@ -369,18 +403,16 @@ fun UploadScreen(
             UploadUiState.Idle -> Unit
         }
 
-        Button(
+        LiquidGlassButton(
             onClick = { triggerUpload() },
             enabled = uploadState !is UploadUiState.Uploading,
-            colors = ButtonDefaults.buttonColors(containerColor = DskRed),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp)
                 .testTag("publish_upload_button")
         ) {
             Icon(Icons.Outlined.CloudUpload, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text(if (isShort) "Publish Short (Free)" else "Publish Video (Free)")
+            Text(if (isShort) "Publish Short (Free)" else "Publish Video (Free)", fontWeight = FontWeight.Bold)
         }
 
         Spacer(Modifier.height(24.dp))

@@ -7,6 +7,10 @@ import com.example.data.local.DskDatabase
 import com.example.data.local.SettingsDataStore
 import com.example.data.local.UserSettings
 import com.example.data.local.entity.*
+import com.example.data.remote.VideoRestrictionInfo
+import com.example.data.remote.YouTubeSearchBundle
+import com.example.data.remote.YouTubeSyncManager
+import com.example.data.remote.YouTubeSyncState
 import com.example.data.security.AuthCrypto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -18,7 +22,8 @@ import java.util.UUID
 class DskRepository(
     private val context: Context,
     private val db: DskDatabase,
-    private val settingsStore: SettingsDataStore
+    private val settingsStore: SettingsDataStore,
+    private val youtubeSync: YouTubeSyncManager? = null
 ) {
     companion object {
         const val MAX_FREE_UPLOAD_BYTES = 100L * 1024L * 1024L // 100 MB free local/tier limit
@@ -62,6 +67,44 @@ class DskRepository(
     val allPlaylistVideosFlow: Flow<List<PlaylistVideoEntity>> = libraryDao.observeAllPlaylistVideos()
     fun observeSearchHistory(userId: String): Flow<List<SearchHistoryEntity>> = libraryDao.observeSearchHistory(userId)
     fun observeNotifications(userId: String): Flow<List<NotificationEntity>> = systemDao.observeNotifications(userId)
+
+    // --- Live YouTube Data API v3 Sync ---
+    fun hasYouTubeApiKey(): Boolean = youtubeSync?.hasValidApiKey() == true
+
+    suspend fun syncYouTubeHome(force: Boolean = false): YouTubeSyncState {
+        return youtubeSync?.refreshHomeFeeds(force) ?: YouTubeSyncState.MissingApiKey
+    }
+
+    suspend fun syncYouTubeCategory(category: String, force: Boolean = false): YouTubeSyncState {
+        return youtubeSync?.refreshCategory(category, force) ?: YouTubeSyncState.MissingApiKey
+    }
+
+    suspend fun syncYouTubeChannel(channelId: String, force: Boolean = false): YouTubeSyncState {
+        return youtubeSync?.refreshChannel(channelId, force) ?: YouTubeSyncState.MissingApiKey
+    }
+
+    suspend fun fetchVideoById(videoId: String): VideoWithChannel? {
+        val cached = videoDao.getVideoById(videoId)
+        if (cached != null) {
+            val ch = channelDao.getChannelById(cached.channelId)
+            if (ch != null) return VideoWithChannel(cached, ch)
+        }
+        return youtubeSync?.fetchAndCacheVideoById(videoId)
+    }
+
+    suspend fun checkVideoRestrictions(videoId: String): VideoRestrictionInfo {
+        return youtubeSync?.checkVideoRestrictions(videoId) ?: VideoRestrictionInfo(isPlayable = true)
+    }
+
+    suspend fun searchYouTubeLive(
+        query: String,
+        typeFilter: String,
+        categoryFilter: String,
+        sortBy: String
+    ): Result<YouTubeSearchBundle> {
+        return youtubeSync?.searchYouTubeLive(query, typeFilter, categoryFilter, sortBy)
+            ?: Result.failure(IllegalStateException("YouTube API sync unavailable."))
+    }
 
     // --- Authentication ---
     suspend fun register(email: String, username: String, password: String): Result<UserEntity> = withContext(Dispatchers.IO) {
@@ -275,7 +318,8 @@ class DskRepository(
                         durationSeconds = 30,
                         visibility = visibility,
                         isPublished = true,
-                        isDemoContent = false
+                        isDemoContent = false,
+                        sourceType = "USER_UPLOAD"
                     )
                 )
                 sid
@@ -297,6 +341,7 @@ class DskRepository(
                         commentsEnabled = commentsEnabled,
                         isPublished = true,
                         isDemoContent = false,
+                        sourceType = "USER_UPLOAD",
                         sectionTag = "Latest Uploads"
                     )
                 )

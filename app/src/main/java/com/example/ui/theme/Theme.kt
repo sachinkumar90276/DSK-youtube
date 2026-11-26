@@ -6,8 +6,12 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+
+val LocalIsDarkGlass = staticCompositionLocalOf { true }
 
 private val DskDarkColorScheme = darkColorScheme(
     primary = DskRed,
@@ -45,16 +49,17 @@ private val DskLightColorScheme = lightColorScheme(
     onSurface = DskLightOnBackground,
     surfaceVariant = DskLightSurfaceVariant,
     onSurfaceVariant = DskLightOnSurfaceVariant,
-    outline = Color(0xFFD5D5E0),
+    surfaceContainerHigh = Color(0xFFF6F8FC),
+    outline = Color(0xFFD0D6E4),
     error = DskRed
 )
 
 private val DskShapes = Shapes(
-    extraSmall = RoundedCornerShape(6.dp),
-    small = RoundedCornerShape(10.dp),
-    medium = RoundedCornerShape(16.dp),
-    large = RoundedCornerShape(22.dp),
-    extraLarge = RoundedCornerShape(28.dp)
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(14.dp),
+    medium = RoundedCornerShape(20.dp),
+    large = RoundedCornerShape(26.dp),
+    extraLarge = RoundedCornerShape(32.dp)
 )
 
 @Composable
@@ -63,10 +68,12 @@ fun DskYouTubeTheme(
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DskDarkColorScheme else DskLightColorScheme
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        shapes = DskShapes,
-        content = content
-    )
+    CompositionLocalProvider(LocalIsDarkGlass provides darkTheme) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            shapes = DskShapes,
+            content = content
+        )
+    }
 }

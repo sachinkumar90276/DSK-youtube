@@ -87,6 +87,8 @@ data class ChannelEntity(
     val bannerUri: String? = null,
     val subscriberCount: Long = 0L,
     val isSuspended: Boolean = false,
+    val sourceType: String = "USER", // YOUTUBE or USER
+    val fetchedAt: Long = System.currentTimeMillis(),
     val createdAt: Long = System.currentTimeMillis()
 )
 
@@ -115,7 +117,7 @@ data class VideoEntity(
     val thumbnailUrl: String? = null,
     val thumbnailResKey: String? = null,
     val durationSeconds: Int = 0,
-    val category: String = "Technology",
+    val category: String = "Entertainment",
     val tags: String = "",
     val visibility: String = "PUBLIC", // PUBLIC, UNLISTED, PRIVATE
     val commentsEnabled: Boolean = true,
@@ -124,6 +126,8 @@ data class VideoEntity(
     val isTrending: Boolean = false,
     val isLive: Boolean = false,
     val isDemoContent: Boolean = false,
+    val sourceType: String = "YOUTUBE", // YOUTUBE or USER_UPLOAD
+    val fetchedAt: Long = System.currentTimeMillis(),
     val sectionTag: String = "Latest Uploads",
     val captionsText: String = "",
     val viewCount: Long = 0L,
@@ -157,6 +161,8 @@ data class ShortEntity(
     val visibility: String = "PUBLIC",
     val isPublished: Boolean = true,
     val isDemoContent: Boolean = false,
+    val sourceType: String = "YOUTUBE", // YOUTUBE or USER_UPLOAD
+    val fetchedAt: Long = System.currentTimeMillis(),
     val viewCount: Long = 0L,
     val likeCount: Long = 0L,
     val commentCount: Long = 0L,

@@ -9,19 +9,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.data.local.entity.ProfileEntity
 import com.example.data.local.entity.UserEntity
-import com.example.ui.components.ChannelAvatar
-import com.example.ui.components.DskBrandLogo
+import com.example.ui.components.*
 import com.example.ui.theme.DskRed
 
 enum class AuthMode {
@@ -51,40 +50,42 @@ fun AuthScreen(
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBack, modifier = Modifier.minimumInteractiveComponentSize()) {
-                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
-            }
-            Text(
-                text = when (mode) {
-                    AuthMode.SIGN_IN -> "Sign In"
-                    AuthMode.REGISTER -> "Create Free Account"
-                    AuthMode.FORGOT_PASSWORD -> "Reset Password"
-                    AuthMode.EDIT_PROFILE -> "Edit Profile & Channel"
-                },
-                style = MaterialTheme.typography.titleLarge
-            )
-        }
+        LiquidGlassTopBar(
+            title = when (mode) {
+                AuthMode.SIGN_IN -> "Sign In"
+                AuthMode.REGISTER -> "Create Free Account"
+                AuthMode.FORGOT_PASSWORD -> "Reset Password"
+                AuthMode.EDIT_PROFILE -> "Edit Profile & Channel"
+            },
+            onBack = onBack
+        )
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(20.dp),
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             if (mode != AuthMode.EDIT_PROFILE) {
-                DskBrandLogo()
-                Text(
-                    "Watch Everything. Pay Nothing. Always free creator & viewer accounts.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                LiquidGlassCard(
+                    shape = RoundedCornerShape(24.dp),
+                    intensity = GlassIntensity.REGULAR,
+                    accentTint = DskRed,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        DskBrandLogo()
+                        Text(
+                            "Watch Everything. Pay Nothing. Always free creator & viewer accounts.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
 
             when (mode) {
@@ -92,44 +93,53 @@ fun AuthScreen(
                     var email by remember { mutableStateOf("") }
                     var password by remember { mutableStateOf("") }
 
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        label = { Text("Email") },
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("login_email_input")
-                    )
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it },
-                        label = { Text("Password") },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("login_password_input")
-                    )
-                    Button(
-                        onClick = { onLogin(email, password) },
-                        colors = ButtonDefaults.buttonColors(containerColor = DskRed),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
-                            .testTag("login_submit_button")
+                    LiquidGlassCard(
+                        shape = RoundedCornerShape(24.dp),
+                        intensity = GlassIntensity.REGULAR,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Sign In")
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        TextButton(onClick = { mode = AuthMode.FORGOT_PASSWORD }) {
-                            Text("Forgot password?")
-                        }
-                        TextButton(onClick = { mode = AuthMode.REGISTER }) {
-                            Text("Create account", color = DskRed)
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            LiquidGlassTextField(
+                                value = email,
+                                onValueChange = { email = it },
+                                label = "Email",
+                                singleLine = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("login_email_input")
+                            )
+                            LiquidGlassTextField(
+                                value = password,
+                                onValueChange = { password = it },
+                                label = "Password",
+                                singleLine = true,
+                                visualTransformation = PasswordVisualTransformation(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("login_password_input")
+                            )
+                            LiquidGlassButton(
+                                onClick = { onLogin(email, password) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("login_submit_button")
+                            ) {
+                                Text("Sign In", fontWeight = FontWeight.Bold)
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                TextButton(onClick = { mode = AuthMode.FORGOT_PASSWORD }) {
+                                    Text("Forgot password?")
+                                }
+                                TextButton(onClick = { mode = AuthMode.REGISTER }) {
+                                    Text("Create account", color = DskRed, fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
                     }
                 }
@@ -139,46 +149,55 @@ fun AuthScreen(
                     var email by remember { mutableStateOf("") }
                     var password by remember { mutableStateOf("") }
 
-                    OutlinedTextField(
-                        value = username,
-                        onValueChange = { username = it },
-                        label = { Text("Channel / Username") },
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("register_username_input")
-                    )
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        label = { Text("Email") },
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("register_email_input")
-                    )
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it },
-                        label = { Text("Password (min 6 chars)") },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("register_password_input")
-                    )
-                    Button(
-                        onClick = { onRegister(email, username, password) },
-                        colors = ButtonDefaults.buttonColors(containerColor = DskRed),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
-                            .testTag("register_submit_button")
+                    LiquidGlassCard(
+                        shape = RoundedCornerShape(24.dp),
+                        intensity = GlassIntensity.REGULAR,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Create Free Account & Channel")
-                    }
-                    TextButton(onClick = { mode = AuthMode.SIGN_IN }) {
-                        Text("Already have an account? Sign In")
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            LiquidGlassTextField(
+                                value = username,
+                                onValueChange = { username = it },
+                                label = "Channel / Username",
+                                singleLine = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("register_username_input")
+                            )
+                            LiquidGlassTextField(
+                                value = email,
+                                onValueChange = { email = it },
+                                label = "Email",
+                                singleLine = true,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("register_email_input")
+                            )
+                            LiquidGlassTextField(
+                                value = password,
+                                onValueChange = { password = it },
+                                label = "Password (min 6 chars)",
+                                singleLine = true,
+                                visualTransformation = PasswordVisualTransformation(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("register_password_input")
+                            )
+                            LiquidGlassButton(
+                                onClick = { onRegister(email, username, password) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("register_submit_button")
+                            ) {
+                                Text("Create Free Account & Channel", fontWeight = FontWeight.Bold)
+                            }
+                            TextButton(onClick = { mode = AuthMode.SIGN_IN }) {
+                                Text("Already have an account? Sign In")
+                            }
+                        }
                     }
                 }
 
@@ -186,32 +205,40 @@ fun AuthScreen(
                     var email by remember { mutableStateOf("") }
                     var newPassword by remember { mutableStateOf("") }
 
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        label = { Text("Account Email") },
-                        singleLine = true,
+                    LiquidGlassCard(
+                        shape = RoundedCornerShape(24.dp),
+                        intensity = GlassIntensity.REGULAR,
                         modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = newPassword,
-                        onValueChange = { newPassword = it },
-                        label = { Text("New Password (min 6 chars)") },
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Button(
-                        onClick = { onResetPassword(email, newPassword) },
-                        colors = ButtonDefaults.buttonColors(containerColor = DskRed),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp)
                     ) {
-                        Text("Reset Password")
-                    }
-                    TextButton(onClick = { mode = AuthMode.SIGN_IN }) {
-                        Text("Back to Sign In")
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            LiquidGlassTextField(
+                                value = email,
+                                onValueChange = { email = it },
+                                label = "Account Email",
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            LiquidGlassTextField(
+                                value = newPassword,
+                                onValueChange = { newPassword = it },
+                                label = "New Password (min 6 chars)",
+                                singleLine = true,
+                                visualTransformation = PasswordVisualTransformation(),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            LiquidGlassButton(
+                                onClick = { onResetPassword(email, newPassword) },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Reset Password", fontWeight = FontWeight.Bold)
+                            }
+                            TextButton(onClick = { mode = AuthMode.SIGN_IN }) {
+                                Text("Back to Sign In")
+                            }
+                        }
                     }
                 }
 
@@ -228,94 +255,118 @@ fun AuthScreen(
                         contract = ActivityResultContracts.PickVisualMedia()
                     ) { uri -> if (uri != null) pickedAvatarUri = uri }
 
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        ChannelAvatar(
-                            name = displayName.ifBlank { "U" },
-                            avatarUri = pickedAvatarUri?.toString() ?: currentProfile?.avatarUri,
-                            size = 64.dp
-                        )
-                        OutlinedButton(onClick = {
-                            avatarPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                        }) {
-                            Icon(Icons.Outlined.PhotoCamera, contentDescription = null)
-                            Spacer(Modifier.width(6.dp))
-                            Text("Upload Profile Picture")
+                    LiquidGlassCard(
+                        shape = RoundedCornerShape(24.dp),
+                        intensity = GlassIntensity.REGULAR,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                                ChannelAvatar(
+                                    name = displayName.ifBlank { "U" },
+                                    avatarUri = pickedAvatarUri?.toString() ?: currentProfile?.avatarUri,
+                                    size = 64.dp
+                                )
+                                LiquidGlassButton(
+                                    onClick = {
+                                        avatarPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                    },
+                                    isPrimary = false
+                                ) {
+                                    Icon(Icons.Outlined.PhotoCamera, contentDescription = null)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Upload Profile Picture")
+                                }
+                            }
+
+                            LiquidGlassTextField(
+                                value = displayName,
+                                onValueChange = { displayName = it },
+                                label = "Display / Channel Name",
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            LiquidGlassTextField(
+                                value = username,
+                                onValueChange = { username = it },
+                                label = "Username",
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            LiquidGlassTextField(
+                                value = bio,
+                                onValueChange = { bio = it },
+                                label = "Channel Bio",
+                                minLines = 2,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            LiquidGlassButton(
+                                onClick = { onUpdateProfile(displayName, username, bio, pickedAvatarUri) },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Save Profile & Channel", fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
 
-                    OutlinedTextField(
-                        value = displayName,
-                        onValueChange = { displayName = it },
-                        label = { Text("Display / Channel Name") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = username,
-                        onValueChange = { username = it },
-                        label = { Text("Username") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = bio,
-                        onValueChange = { bio = it },
-                        label = { Text("Channel Bio") },
-                        minLines = 2,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Button(
-                        onClick = { onUpdateProfile(displayName, username, bio, pickedAvatarUri) },
-                        colors = ButtonDefaults.buttonColors(containerColor = DskRed),
+                    LiquidGlassCard(
+                        shape = RoundedCornerShape(24.dp),
+                        intensity = GlassIntensity.SUBTLE,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Save Profile & Channel")
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text("Change Password", style = MaterialTheme.typography.titleMedium)
+                            LiquidGlassTextField(
+                                value = currentPass,
+                                onValueChange = { currentPass = it },
+                                label = "Current Password",
+                                visualTransformation = PasswordVisualTransformation(),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            LiquidGlassTextField(
+                                value = newPass,
+                                onValueChange = { newPass = it },
+                                label = "New Password",
+                                visualTransformation = PasswordVisualTransformation(),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            LiquidGlassButton(
+                                onClick = {
+                                    onChangePassword(currentPass, newPass)
+                                    currentPass = ""
+                                    newPass = ""
+                                },
+                                isPrimary = false,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Update Password")
+                            }
+                        }
                     }
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    Text("Change Password", style = MaterialTheme.typography.titleMedium)
-                    OutlinedTextField(
-                        value = currentPass,
-                        onValueChange = { currentPass = it },
-                        label = { Text("Current Password") },
-                        visualTransformation = PasswordVisualTransformation(),
-                        singleLine = true,
+                    LiquidGlassCard(
+                        shape = RoundedCornerShape(18.dp),
+                        intensity = GlassIntensity.SUBTLE,
                         modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedTextField(
-                        value = newPass,
-                        onValueChange = { newPass = it },
-                        label = { Text("New Password") },
-                        visualTransformation = PasswordVisualTransformation(),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    OutlinedButton(
-                        onClick = {
-                            onChangePassword(currentPass, newPass)
-                            currentPass = ""
-                            newPass = ""
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Update Password")
-                    }
-
-                    Spacer(Modifier.height(8.dp))
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp),
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(currentUser?.email ?: "", style = MaterialTheme.typography.bodySmall)
                             TextButton(onClick = onLogout) {
-                                Text("Logout", color = DskRed)
+                                Text("Logout", color = DskRed, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
