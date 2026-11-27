@@ -63,7 +63,18 @@ android {
     compose = true
     buildConfig = true
   }
-  testOptions { unitTests { isIncludeAndroidResources = true } }
+  testOptions {
+    unitTests {
+      isIncludeAndroidResources = true
+      all { test ->
+        test.systemProperty("robolectric.offline", "true")
+        test.systemProperty(
+            "robolectric.dependency.dir",
+            layout.buildDirectory.dir("robolectric").get().asFile.absolutePath,
+        )
+      }
+    }
+  }
   dependenciesInfo {
     includeInApk = false
     includeInBundle = true
@@ -79,6 +90,19 @@ secrets {
 }
 
 googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
+
+val robolectricSdkDeps by configurations.creating {
+  isCanBeConsumed = false
+  isCanBeResolved = true
+  isTransitive = false
+}
+
+val prepareRobolectricSdkJars by tasks.registering(Sync::class) {
+  from(robolectricSdkDeps)
+  into(layout.buildDirectory.dir("robolectric"))
+}
+
+tasks.withType<Test>().configureEach { dependsOn(prepareRobolectricSdkJars) }
 
 // Some unused dependencies are commented out below instead of being removed.
 // This makes it easy to add them back in the future if needed.
@@ -126,6 +150,7 @@ dependencies {
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
   testImplementation(libs.robolectric)
+  robolectricSdkDeps("org.robolectric:android-all-instrumented:15-robolectric-13954326-i7")
   androidTestImplementation(platform(libs.androidx.compose.bom))
   androidTestImplementation(libs.androidx.compose.ui.test.junit4)
   androidTestImplementation(libs.androidx.espresso.core)
