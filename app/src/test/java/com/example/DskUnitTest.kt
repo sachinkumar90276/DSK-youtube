@@ -5,7 +5,9 @@ import com.example.data.remote.YouTubeContentRating
 import com.example.data.remote.YouTubeParser
 import com.example.data.remote.YouTubeRegionRestriction
 import com.example.data.remote.YouTubeRetrofitClient
+import com.example.data.remote.YouTubeSearchBundle
 import com.example.data.remote.YouTubeSyncManager
+import com.example.data.remote.YouTubeSyncState
 import com.example.data.remote.YouTubeVideoResource
 import com.example.data.remote.YouTubeVideoStatus
 import com.example.data.security.AuthCrypto
@@ -206,5 +208,48 @@ class DskUnitTest {
         assertTrue(mapYouTubeErrorMessage(100).contains("unavailable", ignoreCase = true))
         assertTrue(mapYouTubeErrorMessage(101).contains("owner", ignoreCase = true))
         assertTrue(mapYouTubeErrorMessage(150).contains("owner", ignoreCase = true))
+    }
+
+    @Test
+    fun `api key sanitization and placeholder detection work properly`() {
+        assertEquals("AIzaSyTestKey123", YouTubeSyncManager.sanitizeApiKey("  \"AIzaSyTestKey123\"  "))
+        assertTrue(YouTubeSyncManager.isApiKeyConfigured("AIzaSyRealKeySample987"))
+        assertFalse(YouTubeSyncManager.isApiKeyConfigured(""))
+        assertFalse(YouTubeSyncManager.isApiKeyConfigured("   "))
+        assertFalse(YouTubeSyncManager.isApiKeyConfigured("MY_YOUTUBE_API_KEY"))
+        assertFalse(YouTubeSyncManager.isApiKeyConfigured("YOUR_API_KEY_HERE"))
+    }
+
+    @Test
+    fun `youtube http errors classify invalid key, api disabled, restrictions, and quota accurately`() {
+        val invalidKey = YouTubeSyncManager.classifyHttpError(400, """{"error":{"errors":[{"reason":"API_KEY_INVALID"}]}}""")
+        assertTrue(invalidKey is YouTubeSyncState.Error)
+        assertTrue((invalidKey as YouTubeSyncState.Error).message.contains("Invalid YOUTUBE_API_KEY"))
+
+        val apiDisabled = YouTubeSyncManager.classifyHttpError(403, """{"error":{"errors":[{"reason":"accessNotConfigured"}]}}""")
+        assertTrue(apiDisabled is YouTubeSyncState.Error)
+        assertTrue((apiDisabled as YouTubeSyncState.Error).message.contains("not enabled"))
+
+        val restricted = YouTubeSyncManager.classifyHttpError(403, """{"error":{"errors":[{"reason":"ipRefererBlocked"}]}}""")
+        assertTrue(restricted is YouTubeSyncState.Error)
+        assertTrue((restricted as YouTubeSyncState.Error).message.contains("restrictions"))
+
+        val quota = YouTubeSyncManager.classifyHttpError(403, """{"error":{"errors":[{"reason":"quotaExceeded"}]}}""")
+        assertTrue(quota is YouTubeSyncState.QuotaExceeded)
+
+        val rateLimit = YouTubeSyncManager.classifyHttpError(429, """{"error":{"message":"Too Many Requests"}}""")
+        assertTrue(rateLimit is YouTubeSyncState.QuotaExceeded)
+
+        val serverErr = YouTubeSyncManager.classifyHttpError(500, "Internal error")
+        assertTrue(serverErr is YouTubeSyncState.Error)
+        assertTrue((serverErr as YouTubeSyncState.Error).message.contains("500"))
+    }
+
+    @Test
+    fun `youtube search bundle tracks nextPageToken for pagination`() {
+        val page1 = YouTubeSearchBundle(emptyList(), emptyList(), emptyList(), nextPageToken = "TOKEN_2")
+        val page2 = YouTubeSearchBundle(emptyList(), emptyList(), emptyList())
+        assertEquals("TOKEN_2", page1.nextPageToken)
+        assertNull(page2.nextPageToken)
     }
 }

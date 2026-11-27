@@ -46,10 +46,7 @@ fun PlaylistDetailScreen(
                     Icon(Icons.Outlined.Edit, contentDescription = "Edit playlist", modifier = Modifier.size(18.dp))
                 }
                 LiquidGlassIconButton(
-                    onClick = {
-                        onDeletePlaylist()
-                        onBack()
-                    },
+                    onClick = { onDeletePlaylist() },
                     size = 38.dp,
                     intensity = GlassIntensity.SUBTLE
                 ) {

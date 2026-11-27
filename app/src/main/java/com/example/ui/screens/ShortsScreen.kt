@@ -67,6 +67,7 @@ fun ShortsScreen(
     onDeleteComment: (String) -> Unit,
     onReportComment: (commentId: String, label: String) -> Unit,
     onRecordShortView: (String) -> Unit,
+    onLoadMoreShorts: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (shorts.isEmpty()) {
@@ -87,11 +88,34 @@ fun ShortsScreen(
         return
     }
 
-    val initialPage = remember(initialShortId, shorts) {
-        shorts.indexOfFirst { it.shortItem.id == initialShortId }.coerceAtLeast(0)
+    val shortsById = remember(shorts) { shorts.associateBy { it.shortItem.id } }
+    val orderedShortIds = remember { mutableStateListOf<String>() }
+    SideEffect {
+        if (orderedShortIds.isEmpty()) {
+            orderedShortIds.addAll(shorts.map { it.shortItem.id })
+        } else {
+            orderedShortIds.removeAll { it !in shortsById }
+            shorts.forEach { s ->
+                if (s.shortItem.id !in orderedShortIds) {
+                    orderedShortIds.add(s.shortItem.id)
+                }
+            }
+        }
     }
-    val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { shorts.size })
+    val orderedShorts = orderedShortIds.mapNotNull { shortsById[it] }
+        .ifEmpty { shorts }
+
+    val initialPage = remember(initialShortId) {
+        orderedShorts.indexOfFirst { it.shortItem.id == initialShortId }.coerceAtLeast(0)
+    }
+    val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { orderedShorts.size })
     var commentSheetShortId by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(pagerState.currentPage, orderedShorts.size) {
+        if (orderedShorts.isNotEmpty() && pagerState.currentPage >= (orderedShorts.size - 3).coerceAtLeast(0)) {
+            onLoadMoreShorts()
+        }
+    }
 
     Box(
         modifier = modifier
@@ -100,10 +124,11 @@ fun ShortsScreen(
     ) {
         VerticalPager(
             state = pagerState,
+            key = { page -> orderedShorts.getOrNull(page)?.shortItem?.id ?: page },
             beyondViewportPageCount = 0, // Efficient bandwidth: only prepare visible Short
             modifier = Modifier.fillMaxSize()
         ) { page ->
-            val item = shorts[page]
+            val item = orderedShorts[page]
             val isCurrentPage = pagerState.currentPage == page
             val isVisible = isCurrentPage && commentSheetShortId == null
             ShortPageItem(

@@ -73,10 +73,13 @@ jobs:
         env:
           YOUTUBE_API_KEY_SECRET: ${{ secrets.YOUTUBE_API_KEY }}
         run: |
-          if [ -n "$YOUTUBE_API_KEY_SECRET" ]; then
-            printf 'YOUTUBE_API_KEY=%s\n' "$YOUTUBE_API_KEY_SECRET" > .env
+          CLEAN_KEY=$(printf '%s' "$YOUTUBE_API_KEY_SECRET" | tr -d '\r\n"' | xargs || true)
+          if [ -n "$CLEAN_KEY" ] && [ "$CLEAN_KEY" != "MY_YOUTUBE_API_KEY" ]; then
+            printf 'YOUTUBE_API_KEY=%s\n' "$CLEAN_KEY" > .env
+            echo "HAS_YOUTUBE_API_KEY=true" >> "$GITHUB_ENV"
             echo "YOUTUBE_API_KEY configured from GitHub Secrets."
           else
+            echo "HAS_YOUTUBE_API_KEY=false" >> "$GITHUB_ENV"
             echo "YOUTUBE_API_KEY secret not set; falling back to .env.example."
           fi
 
@@ -111,13 +114,26 @@ jobs:
           gradle :app:prepareRobolectricSdkJars --console=plain
 
       - name: Run unit tests
-        run: gradle :app:testDebugUnitTest --console=plain
+        run: gradle :app:testDebugUnitTest --no-configuration-cache --console=plain
 
       - name: Compile Android application
-        run: gradle :app:compileDebugSources --console=plain
+        run: gradle :app:compileDebugSources --no-configuration-cache --console=plain
+
+      - name: Verify BuildConfig API key injection
+        run: |
+          BC="app/build/generated/source/buildConfig/debug/com/example/BuildConfig.java"
+          test -f "$BC"
+          grep -q 'YOUTUBE_API_KEY' "$BC"
+          if [ "$HAS_YOUTUBE_API_KEY" = "true" ]; then
+            if grep -q 'MY_YOUTUBE_API_KEY' "$BC"; then
+              echo "ERROR: Placeholder YOUTUBE_API_KEY remained in BuildConfig despite secret."
+              exit 1
+            fi
+            echo "Verified BuildConfig.YOUTUBE_API_KEY was injected cleanly (value redacted)."
+          fi
 
       - name: Build Debug APK
-        run: gradle :app:assembleDebug --console=plain
+        run: gradle :app:assembleDebug --no-configuration-cache --console=plain
 
       - name: Verify Debug APK
         run: |

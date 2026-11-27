@@ -155,6 +155,7 @@ private fun DskYouTubeRoot(
     val youtubeSyncState by viewModel.youtubeSyncState.collectAsStateWithLifecycle()
     val liveSearchState by viewModel.liveSearchState.collectAsStateWithLifecycle()
     val loadedWatchVideo by viewModel.loadedWatchVideo.collectAsStateWithLifecycle()
+    val watchLoadFailed by viewModel.watchLoadFailed.collectAsStateWithLifecycle()
     val watchVideoRestriction by viewModel.watchVideoRestriction.collectAsStateWithLifecycle()
     val adminDashboard by viewModel.adminDashboard.collectAsStateWithLifecycle()
     val uiMessage by viewModel.uiMessage.collectAsStateWithLifecycle()
@@ -300,6 +301,8 @@ private fun DskYouTubeRoot(
                                     syncState = youtubeSyncState,
                                     onRefresh = { viewModel.refreshYouTubeHome(force = true) },
                                     onCategorySelected = { cat -> viewModel.refreshCategory(cat) },
+                                    onCategoryRefresh = { cat -> viewModel.refreshCategory(cat, force = true) },
+                                    onLoadMore = { cat -> viewModel.loadMoreFeed(cat) },
                                     onSearchClick = { navigateTo(AppRoute.Search) },
                                     onNotificationsClick = { navigateTo(AppRoute.Notifications) },
                                     onProfileClick = {
@@ -367,7 +370,8 @@ private fun DskYouTubeRoot(
                                     onReportComment = { cid, label ->
                                         reportTarget = ReportTarget("COMMENT", cid, label)
                                     },
-                                    onRecordShortView = { sid -> viewModel.recordShortView(sid) }
+                                    onRecordShortView = { sid -> viewModel.recordShortView(sid) },
+                                    onLoadMoreShorts = { viewModel.loadMoreShorts() }
                                 )
                             }
 
@@ -486,12 +490,25 @@ private fun DskYouTubeRoot(
                                                     horizontalAlignment = Alignment.CenterHorizontally,
                                                     verticalArrangement = Arrangement.spacedBy(12.dp)
                                                 ) {
-                                                    CircularProgressIndicator(color = DskRed)
-                                                    Text(
-                                                        "Preparing In-App Player...",
-                                                        style = MaterialTheme.typography.bodyMedium,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                    )
+                                                    if (watchLoadFailed == route.videoId) {
+                                                        Text(
+                                                            "Unable to load video. Check your connection or YOUTUBE_API_KEY configuration.",
+                                                            style = MaterialTheme.typography.bodyMedium,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                        LiquidGlassButton(
+                                                            onClick = { viewModel.ensureVideoLoaded(route.videoId) }
+                                                        ) {
+                                                            Text("Retry", fontWeight = FontWeight.Bold)
+                                                        }
+                                                    } else {
+                                                        CircularProgressIndicator(color = DskRed)
+                                                        Text(
+                                                            "Preparing In-App Player...",
+                                                            style = MaterialTheme.typography.bodyMedium,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
@@ -502,17 +519,18 @@ private fun DskYouTubeRoot(
                                             .distinctBy { it.video.id }
                                             .filter { it.video.id != target.video.id }
                                     }
-                                    VideoPlayerScreen(
-                                        videoItem = target,
-                                        relatedVideos = related,
-                                        comments = commentsMap["VIDEO:${target.video.id}"].orEmpty(),
-                                        isLiked = "VIDEO:${target.video.id}" in likedKeys,
-                                        isDisliked = "VIDEO:${target.video.id}" in dislikedKeys,
-                                        isSubscribed = target.channel.id in subscribedIds,
-                                        isWatchLater = target.video.id in watchLaterIds,
-                                        autoplayNext = settings.autoplayNext,
-                                        defaultQuality = settings.defaultQuality,
-                                        currentUserId = currentUser?.id,
+                                    key(target.video.id) {
+                                        VideoPlayerScreen(
+                                            videoItem = target,
+                                            relatedVideos = related,
+                                            comments = commentsMap["VIDEO:${target.video.id}"].orEmpty(),
+                                            isLiked = "VIDEO:${target.video.id}" in likedKeys,
+                                            isDisliked = "VIDEO:${target.video.id}" in dislikedKeys,
+                                            isSubscribed = target.channel.id in subscribedIds,
+                                            isWatchLater = target.video.id in watchLaterIds,
+                                            autoplayNext = settings.autoplayNext,
+                                            defaultQuality = settings.defaultQuality,
+                                            currentUserId = currentUser?.id,
                                         onBack = { popRoute() },
                                         onSelectVideo = { vid ->
                                             navigateTo(AppRoute.Watch(vid))
@@ -563,7 +581,8 @@ private fun DskYouTubeRoot(
                                             ?.takeIf { it.first == target.video.id && !it.second.isPlayable }
                                             ?.second?.reasonMessage,
                                         onFullscreenChanged = { fs -> isWatchFullscreen = fs }
-                                    )
+                                        )
+                                    }
                                 }
                             }
 
@@ -578,6 +597,7 @@ private fun DskYouTubeRoot(
                                     onBack = { popRoute() },
                                     onRecordSearch = { q -> viewModel.recordSearch(q) },
                                     onSearchYouTube = { q, t, c, s -> viewModel.searchYouTubeLive(q, t, c, s) },
+                                    onLoadMoreSearch = { t, c, s -> viewModel.loadMoreSearchResults(t, c, s) },
                                     onClearLiveSearch = { viewModel.clearLiveSearch() },
                                     onDeleteSearchQuery = { id -> viewModel.deleteSearchQuery(id) },
                                     onClearSearchHistory = { viewModel.clearSearchHistory() },
@@ -593,7 +613,9 @@ private fun DskYouTubeRoot(
                                 }
                                 val ch = channels.firstOrNull { it.id == route.channelId }
                                 if (ch == null) {
-                                    popRoute()
+                                    LaunchedEffect(route.channelId) {
+                                        popRoute()
+                                    }
                                 } else {
                                     ChannelScreen(
                                         channel = ch,
@@ -622,7 +644,9 @@ private fun DskYouTubeRoot(
                             is AppRoute.PlaylistDetail -> {
                                 val plSummary = playlists.firstOrNull { it.playlist.id == route.playlistId }
                                 if (plSummary == null) {
-                                    popRoute()
+                                    LaunchedEffect(route.playlistId) {
+                                        popRoute()
+                                    }
                                 } else {
                                     PlaylistDetailScreen(
                                         playlist = plSummary.playlist,

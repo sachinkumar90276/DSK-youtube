@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
@@ -49,6 +50,8 @@ fun HomeScreen(
     syncState: YouTubeSyncState,
     onRefresh: () -> Unit,
     onCategorySelected: (String) -> Unit,
+    onCategoryRefresh: (String) -> Unit = { onCategorySelected(it) },
+    onLoadMore: (String) -> Unit = {},
     onSearchClick: () -> Unit,
     onNotificationsClick: () -> Unit,
     onProfileClick: () -> Unit,
@@ -75,6 +78,21 @@ fun HomeScreen(
     }
 
     val isRefreshing = syncState is YouTubeSyncState.Refreshing
+    val listState = rememberLazyListState()
+    val shouldLoadMore by remember(selectedCategory, filteredVideos.size, videos.size) {
+        derivedStateOf {
+            val info = listState.layoutInfo
+            val total = info.totalItemsCount
+            val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: 0
+            total > 2 && lastVisible >= total - 2
+        }
+    }
+
+    LaunchedEffect(shouldLoadMore, selectedCategory, filteredVideos.size, isRefreshing) {
+        if (shouldLoadMore && !isRefreshing && filteredVideos.isNotEmpty()) {
+            onLoadMore(selectedCategory)
+        }
+    }
 
     Column(
         modifier = modifier
@@ -232,11 +250,12 @@ fun HomeScreen(
         PullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = {
-                if (selectedCategory == "All") onRefresh() else onCategorySelected(selectedCategory)
+                if (selectedCategory == "All") onRefresh() else onCategoryRefresh(selectedCategory)
             },
             modifier = Modifier.fillMaxSize()
         ) {
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(top = 6.dp, bottom = 28.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp)
@@ -311,7 +330,9 @@ fun HomeScreen(
                                 title = "YouTube API Quota Exhausted",
                                 message = syncState.message,
                                 accentColor = DskWarning,
-                                onRetry = onRefresh
+                                onRetry = {
+                                    if (selectedCategory == "All") onRefresh() else onCategoryRefresh(selectedCategory)
+                                }
                             )
                         }
                     }
@@ -321,7 +342,9 @@ fun HomeScreen(
                                 title = "YouTube Refresh Notice",
                                 message = syncState.message,
                                 accentColor = DskWarning,
-                                onRetry = onRefresh
+                                onRetry = {
+                                    if (selectedCategory == "All") onRefresh() else onCategoryRefresh(selectedCategory)
+                                }
                             )
                         }
                     }
@@ -481,7 +504,7 @@ fun HomeScreen(
                                 title = if (isRefreshing) "Fetching $selectedCategory from YouTube..." else "No videos in $selectedCategory yet",
                                 subtitle = "Pull down or tap Refresh to fetch live $selectedCategory videos from YouTube.",
                                 isLoading = isRefreshing,
-                                onRetry = { onCategorySelected(selectedCategory) }
+                                onRetry = { onCategoryRefresh(selectedCategory) }
                             )
                         }
                     } else {

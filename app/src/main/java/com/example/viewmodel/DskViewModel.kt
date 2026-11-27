@@ -261,8 +261,15 @@ class DskViewModel(private val repo: DskRepository) : ViewModel() {
     private val _loadedWatchVideo = MutableStateFlow<VideoWithChannel?>(null)
     val loadedWatchVideo: StateFlow<VideoWithChannel?> = _loadedWatchVideo.asStateFlow()
 
+    private val _watchLoadFailed = MutableStateFlow<String?>(null)
+    val watchLoadFailed: StateFlow<String?> = _watchLoadFailed.asStateFlow()
+
     private val _watchVideoRestriction = MutableStateFlow<Pair<String, VideoRestrictionInfo>?>(null)
     val watchVideoRestriction: StateFlow<Pair<String, VideoRestrictionInfo>?> = _watchVideoRestriction.asStateFlow()
+
+    private val _isLoadingMoreFeed = MutableStateFlow(false)
+    private val _isLoadingMoreShorts = MutableStateFlow(false)
+    private val _isLoadingMoreSearch = MutableStateFlow(false)
 
     private val _uiMessage = MutableStateFlow<String?>(null)
     val uiMessage: StateFlow<String?> = _uiMessage.asStateFlow()
@@ -297,10 +304,45 @@ class DskViewModel(private val repo: DskRepository) : ViewModel() {
         }
     }
 
-    fun refreshCategory(category: String) {
+    fun refreshCategory(category: String, force: Boolean = false) {
         viewModelScope.launch {
             _youtubeSyncState.value = YouTubeSyncState.Refreshing
-            _youtubeSyncState.value = repo.syncYouTubeCategory(category, force = false)
+            _youtubeSyncState.value = repo.syncYouTubeCategory(category, force = force)
+        }
+    }
+
+    fun loadMoreFeed(category: String) {
+        if (_isLoadingMoreFeed.value || _youtubeSyncState.value is YouTubeSyncState.Refreshing) return
+        if (_youtubeSyncState.value is YouTubeSyncState.MissingApiKey) return
+        _isLoadingMoreFeed.value = true
+        viewModelScope.launch {
+            try {
+                val res = if (category == "All") {
+                    repo.loadMoreYouTubeHome()
+                } else {
+                    repo.loadMoreYouTubeCategory(category)
+                }
+                if (res !is YouTubeSyncState.Error || _youtubeSyncState.value !is YouTubeSyncState.Ready) {
+                    _youtubeSyncState.value = res
+                }
+            } finally {
+                _isLoadingMoreFeed.value = false
+            }
+        }
+    }
+
+    fun loadMoreShorts() {
+        if (_isLoadingMoreShorts.value || _youtubeSyncState.value is YouTubeSyncState.MissingApiKey) return
+        _isLoadingMoreShorts.value = true
+        viewModelScope.launch {
+            try {
+                val res = repo.loadMoreYouTubeShorts()
+                if (res !is YouTubeSyncState.Error || _youtubeSyncState.value !is YouTubeSyncState.Ready) {
+                    _youtubeSyncState.value = res
+                }
+            } finally {
+                _isLoadingMoreShorts.value = false
+            }
         }
     }
 
@@ -315,12 +357,18 @@ class DskViewModel(private val repo: DskRepository) : ViewModel() {
 
     fun ensureVideoLoaded(videoId: String) {
         viewModelScope.launch {
+            if (_watchLoadFailed.value == videoId) {
+                _watchLoadFailed.value = null
+            }
             val restriction = repo.checkVideoRestrictions(videoId)
             _watchVideoRestriction.value = videoId to restriction
             val loaded = repo.fetchVideoById(videoId)
             if (loaded != null) {
                 _loadedWatchVideo.value = loaded
                 _watchVideoRestriction.value = videoId to repo.checkVideoRestrictions(videoId)
+                _watchLoadFailed.value = null
+            } else {
+                _watchLoadFailed.value = videoId
             }
         }
     }
@@ -340,6 +388,29 @@ class DskViewModel(private val repo: DskRepository) : ViewModel() {
                 .onFailure { err ->
                     _liveSearchState.value = LiveSearchUiState.Error(err.message ?: "YouTube search failed.")
                 }
+        }
+    }
+
+    fun loadMoreSearchResults(typeFilter: String, categoryFilter: String, sortBy: String) {
+        val current = _liveSearchState.value as? LiveSearchUiState.Results ?: return
+        val nextToken = current.bundle.nextPageToken ?: return
+        if (_isLoadingMoreSearch.value) return
+        _isLoadingMoreSearch.value = true
+        viewModelScope.launch {
+            try {
+                repo.searchYouTubeLive(current.query, typeFilter, categoryFilter, sortBy, nextToken)
+                    .onSuccess { nextBundle ->
+                        val merged = YouTubeSearchBundle(
+                            videos = (current.bundle.videos + nextBundle.videos).distinctBy { it.video.id },
+                            shorts = (current.bundle.shorts + nextBundle.shorts).distinctBy { it.shortItem.id },
+                            channels = (current.bundle.channels + nextBundle.channels).distinctBy { it.id },
+                            nextPageToken = nextBundle.nextPageToken
+                        )
+                        _liveSearchState.value = LiveSearchUiState.Results(current.query, merged)
+                    }
+            } finally {
+                _isLoadingMoreSearch.value = false
+            }
         }
     }
 

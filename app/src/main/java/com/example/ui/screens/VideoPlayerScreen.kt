@@ -558,6 +558,7 @@ private fun YouTubePlayerSurface(
     var durationSec by remember(youtubeVideoId) { mutableIntStateOf(video.durationSeconds.coerceAtLeast(1)) }
     var volumePercent by remember { mutableIntStateOf(100) }
     var seekRequest by remember(youtubeVideoId) { mutableStateOf<Pair<Int, Long>?>(null) }
+    var playbackToggleRequest by remember(youtubeVideoId) { mutableStateOf<Pair<Boolean, Long>?>(null) }
 
     val topControlBar: @Composable () -> Unit = {
         Row(
@@ -710,6 +711,7 @@ private fun YouTubePlayerSurface(
                         val next = !isPlaying
                         isPlaying = next
                         isActive = next
+                        playbackToggleRequest = next to System.nanoTime()
                     },
                     modifier = Modifier.testTag("player_yt_play_pause")
                 ) {
@@ -783,6 +785,7 @@ private fun YouTubePlayerSurface(
     val latestSpeed by rememberUpdatedState(speed)
     val latestVolume by rememberUpdatedState(volumePercent)
     val latestSeek by rememberUpdatedState(seekRequest)
+    val latestPlaybackToggle by rememberUpdatedState(playbackToggleRequest)
     val latestIsActive by rememberUpdatedState(isActive)
     val latestRestriction by rememberUpdatedState(restrictionMessage)
     val latestOnEnded by rememberUpdatedState(onEnded)
@@ -797,6 +800,7 @@ private fun YouTubePlayerSurface(
                 playbackRate = latestSpeed,
                 volumePercent = latestVolume,
                 seekToSecondsRequest = latestSeek,
+                playbackToggleRequest = latestPlaybackToggle,
                 isActive = latestIsActive,
                 restrictionMessage = latestRestriction,
                 onProgress = { cur, dur ->

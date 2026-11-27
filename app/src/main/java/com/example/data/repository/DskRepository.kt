@@ -79,6 +79,18 @@ class DskRepository(
         return youtubeSync?.refreshCategory(category, force) ?: YouTubeSyncState.MissingApiKey
     }
 
+    suspend fun loadMoreYouTubeHome(): YouTubeSyncState {
+        return youtubeSync?.loadMoreHomeVideos() ?: YouTubeSyncState.MissingApiKey
+    }
+
+    suspend fun loadMoreYouTubeCategory(category: String): YouTubeSyncState {
+        return youtubeSync?.loadMoreCategoryVideos(category) ?: YouTubeSyncState.MissingApiKey
+    }
+
+    suspend fun loadMoreYouTubeShorts(): YouTubeSyncState {
+        return youtubeSync?.loadMoreShorts() ?: YouTubeSyncState.MissingApiKey
+    }
+
     suspend fun syncYouTubeChannel(channelId: String, force: Boolean = false): YouTubeSyncState {
         return youtubeSync?.refreshChannel(channelId, force) ?: YouTubeSyncState.MissingApiKey
     }
@@ -100,9 +112,10 @@ class DskRepository(
         query: String,
         typeFilter: String,
         categoryFilter: String,
-        sortBy: String
+        sortBy: String,
+        pageToken: String? = null
     ): Result<YouTubeSearchBundle> {
-        return youtubeSync?.searchYouTubeLive(query, typeFilter, categoryFilter, sortBy)
+        return youtubeSync?.searchYouTubeLive(query, typeFilter, categoryFilter, sortBy, pageToken)
             ?: Result.failure(IllegalStateException("YouTube API sync unavailable."))
     }
 

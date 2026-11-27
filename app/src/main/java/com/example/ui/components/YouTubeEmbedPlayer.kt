@@ -68,6 +68,7 @@ fun YouTubeEmbedPlayer(
     playbackRate: Float = 1f,
     volumePercent: Int = 100,
     seekToSecondsRequest: Pair<Int, Long>? = null,
+    playbackToggleRequest: Pair<Boolean, Long>? = null,
     isActive: Boolean = true,
     restrictionMessage: String? = null,
     onProgress: (currentSec: Int, durationSec: Int) -> Unit = { _, _ -> },
@@ -160,6 +161,17 @@ fun YouTubeEmbedPlayer(
         val wv = webViewRef ?: return@LaunchedEffect
         if (!isPlayerReady || wv.tag == "DESTROYED") return@LaunchedEffect
         if (isActive) {
+            wv.evaluateJavascript("if (window.dskPlay) window.dskPlay();", null)
+        } else {
+            wv.evaluateJavascript("if (window.dskPause) window.dskPause();", null)
+        }
+    }
+
+    LaunchedEffect(playbackToggleRequest, isPlayerReady, webViewInstanceEpoch) {
+        val req = playbackToggleRequest ?: return@LaunchedEffect
+        val wv = webViewRef ?: return@LaunchedEffect
+        if (!isPlayerReady || wv.tag == "DESTROYED") return@LaunchedEffect
+        if (req.first) {
             wv.evaluateJavascript("if (window.dskPlay) window.dskPlay();", null)
         } else {
             wv.evaluateJavascript("if (window.dskPause) window.dskPause();", null)

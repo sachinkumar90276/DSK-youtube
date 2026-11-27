@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -37,6 +38,7 @@ fun SearchScreen(
     onBack: () -> Unit,
     onRecordSearch: (String) -> Unit,
     onSearchYouTube: (query: String, typeFilter: String, categoryFilter: String, sortBy: String) -> Unit,
+    onLoadMoreSearch: (typeFilter: String, categoryFilter: String, sortBy: String) -> Unit = { _, _, _ -> },
     onClearLiveSearch: () -> Unit,
     onDeleteSearchQuery: (String) -> Unit,
     onClearSearchHistory: () -> Unit,
@@ -87,7 +89,9 @@ fun SearchScreen(
                 item.video.category.lowercase().contains(activeQ) ||
                 item.video.tags.lowercase().contains(activeQ) ||
                 item.channel.name.lowercase().contains(activeQ)
-            val matchesCat = categoryFilter == "All" || item.video.category.equals(categoryFilter, true)
+            val matchesCat = categoryFilter == "All" ||
+                (categoryFilter == "Live" && (item.video.isLive || item.video.category.equals("Live", true))) ||
+                item.video.category.equals(categoryFilter, true)
             matchesQ && matchesCat
         }
         when (sortBy) {
@@ -269,7 +273,23 @@ fun SearchScreen(
             }
         }
 
+        val listState = rememberLazyListState()
+        val shouldLoadMore by remember(activeLiveResults) {
+            derivedStateOf {
+                val info = listState.layoutInfo
+                val total = info.totalItemsCount
+                val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: 0
+                activeLiveResults?.nextPageToken != null && total > 2 && lastVisible >= total - 2
+            }
+        }
+        LaunchedEffect(shouldLoadMore, liveSearchState) {
+            if (shouldLoadMore && liveSearchState is LiveSearchUiState.Results) {
+                onLoadMoreSearch(typeFilter, categoryFilter, sortBy)
+            }
+        }
+
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
