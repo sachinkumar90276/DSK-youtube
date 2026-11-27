@@ -5,10 +5,15 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
   build-apk:
     runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: ${{ runner.temp }}/android-sdk
+      ANDROID_SDK_ROOT: ${{ runner.temp }}/android-sdk
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -19,27 +24,68 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          packages: |
-            platform-tools
-            platforms;android-36.1
-            build-tools;36.0.0
+      - name: Prepare Android SDK directory
+        run: mkdir -p "$ANDROID_HOME"
 
-      - name: Setup Gradle
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: ''
+          accept-android-sdk-licenses: true
+          log-accepted-android-sdk-licenses: false
+
+      - name: Install required Android SDK packages
+        run: |
+          set +o pipefail
+          yes | sdkmanager --sdk_root="$ANDROID_HOME" --install \
+            "platform-tools" \
+            "platforms;android-36.1" \
+            "build-tools;36.0.0"
+
+      - name: Accept Android licenses
+        run: |
+          set +o pipefail
+          yes | sdkmanager --sdk_root="$ANDROID_HOME" --licenses >/dev/null
+
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.3.1'
 
-      - name: Run Unit Tests
-        run: gradle :app:testDebugUnitTest
+      - name: Verify SDK installation
+        run: |
+          sdkmanager --sdk_root="$ANDROID_HOME" --list_installed
+          test -f "$ANDROID_HOME/platforms/android-36.1/android.jar"
+          test -d "$ANDROID_HOME/build-tools/36.0.0"
+          test -x "$ANDROID_HOME/platform-tools/adb"
+
+      - name: Resolve dependencies
+        run: |
+          gradle :app:dependencies --configuration debugRuntimeClasspath --console=plain >/dev/null
+          gradle :app:prepareRobolectricSdkJars --console=plain
+
+      - name: Run unit tests
+        run: gradle :app:testDebugUnitTest --console=plain
+
+      - name: Prepare Debug Keystore
+        run: |
+          if [ ! -f debug.keystore ] && [ -f debug.keystore.base64 ]; then
+            base64 -d debug.keystore.base64 > debug.keystore
+          fi
 
       - name: Build Debug APK
-        run: gradle :app:assembleDebug
+        run: gradle :app:assembleDebug --console=plain
 
-      - name: Upload APK Artifact
+      - name: Verify APK file exists
+        run: |
+          APK_PATH=$(find app/build/outputs/apk/debug -maxdepth 1 -name '*.apk' -print -quit)
+          test -n "$APK_PATH"
+          test -s "$APK_PATH"
+          ls -lh "$APK_PATH"
+
+      - name: Upload APK as GitHub Actions Artifact
         uses: actions/upload-artifact@v4
         with:
           name: dsk-youtube-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
